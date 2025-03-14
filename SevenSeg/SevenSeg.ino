@@ -1,10 +1,19 @@
 /*  TI_63_7Seg_ComK
-    Seven segment display Test mit 5161AS
-    Positivlogik
-    R = 220 Ohm per LED
+    7 Segment Display Test mit 5161AS
+    LEDs sind Positivaktiv
+    Vorwiderstand für LEDs jeweils 220 Ohm
 
     Pin Belegung
-    
+    Bauteilkomponente   BauteilPin  ArduinoPin  MC_Pin
+    A                   7           2           PD2
+    B                   6           3           PD3
+    C                   4           4           PD4
+    D                   2           5           PD5
+    E                   1           6           PD6
+    F                   9           7           PD7
+    G                   10          8           PB0
+    DP                  5           9           PB1
+    GND                 3 oder 8    GND         GND
 */
 
 #define A 2
@@ -20,6 +29,9 @@ uint8_t current_number = -1;
 
 void setup()
 {
+  Serial.begin(9600);
+  Serial.println("7 Segment Display");
+
   pinMode(A, OUTPUT);
   pinMode(B, OUTPUT);
   pinMode(C, OUTPUT);
@@ -131,6 +143,7 @@ void display_number(uint8_t x)
 
 void test_lauflicht()
 {
+  Serial.println("Lauflicht");
   digitalWrite(A, 0);
   digitalWrite(B, 0);
   digitalWrite(C, 0);
@@ -165,6 +178,7 @@ void test_lauflicht()
   delay(500);
   digitalWrite(DP, 0);
 
+  Serial.println("Blinken");
   for (uint8_t i = 0; i < 3 * 2; i++)
   {
     delay(500);
