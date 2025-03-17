@@ -16,6 +16,7 @@
     GND                 3 oder 8    GND         GND
 */
 
+// Arduino Pins
 #define A 2
 #define B 3
 #define C 4
@@ -25,7 +26,48 @@
 #define G 8
 #define DP 9
 
+// MC Pins
+#define A_D PB0
+
 uint8_t current_number = -1;
+
+// An und Auszustände für 7 Segment LEDs: A - DP 
+typedef unsigned char DiceMap;
+
+// Zuweisungsliste: Zahl (0 - 9) zu LED Zustände; [10] => aus
+const DiceMap segment_assignments[] = {
+  0b11111100,
+  0b11111100,
+  0b01100000,
+  0b11110010,
+  0b01100110,
+  0b10110110,
+  0b10111110,
+  0b11100000,
+  0b11111110,
+  0b11110110
+  0b00000000
+  };
+
+/* Zeigt Zahl auf 7 Segment Display
+@returns 0=Erfolgreich; 1=Fehler
+*/ 
+int display_one_number(uint8_t number)
+{
+  if (number > 9)
+  {
+    return 1;
+  }
+
+  // LED Zustand Code
+  DiceMap segment_assigment = segment_assigments[number];
+
+  //  
+  DiceMap pins_0 = segment_assigment & 0b11110000;
+  DiceMap pins_1 = segment_assigment & 0b00001111;
+
+  return 0;
+}
 
 void setup()
 {
@@ -41,104 +83,7 @@ void setup()
   pinMode(G, OUTPUT);
   pinMode(DP, OUTPUT);
 
-  display_number(0);
-}
-
-void display_number(uint8_t x)
-{
-  switch (x)
-  {
-    case 0:
-      digitalWrite(A, 1);
-      digitalWrite(B, 1);
-      digitalWrite(C, 1);
-      digitalWrite(D, 1);
-      digitalWrite(E, 1);
-      digitalWrite(F, 1);
-      digitalWrite(G, 0);
-      break;
-    case 1:
-      digitalWrite(A, 0);
-      digitalWrite(B, 1);
-      digitalWrite(C, 1);
-      digitalWrite(D, 0);
-      digitalWrite(E, 0);
-      digitalWrite(F, 0);
-      digitalWrite(G, 0);
-      break;
-    case 2:
-      digitalWrite(A, 1);
-      digitalWrite(B, 1);
-      digitalWrite(C, 0);
-      digitalWrite(D, 1);
-      digitalWrite(E, 1);
-      digitalWrite(F, 0);
-      digitalWrite(G, 1);
-      break;
-    case 3:
-      digitalWrite(A, 1);
-      digitalWrite(B, 1);
-      digitalWrite(C, 1);
-      digitalWrite(D, 1);
-      digitalWrite(E, 0);
-      digitalWrite(F, 0);
-      digitalWrite(G, 1);
-      break;
-    case 4:
-      digitalWrite(A, 0);
-      digitalWrite(B, 1);
-      digitalWrite(C, 1);
-      digitalWrite(D, 0);
-      digitalWrite(E, 0);
-      digitalWrite(F, 1);
-      digitalWrite(G, 1);
-      break;
-    case 5:
-      digitalWrite(A, 1);
-      digitalWrite(B, 0);
-      digitalWrite(C, 1);
-      digitalWrite(D, 1);
-      digitalWrite(E, 0);
-      digitalWrite(F, 1);
-      digitalWrite(G, 1);
-      break;
-    case 6:
-      digitalWrite(A, 1);
-      digitalWrite(B, 0);
-      digitalWrite(C, 1);
-      digitalWrite(D, 1);
-      digitalWrite(E, 1);
-      digitalWrite(F, 1);
-      digitalWrite(G, 1);
-      break;
-    case 7:
-      digitalWrite(A, 1);
-      digitalWrite(B, 1);
-      digitalWrite(C, 1);
-      digitalWrite(D, 0);
-      digitalWrite(E, 0);
-      digitalWrite(F, 0);
-      digitalWrite(G, 0);
-      break;
-    case 8:
-      digitalWrite(A, 1);
-      digitalWrite(B, 1);
-      digitalWrite(C, 1);
-      digitalWrite(D, 1);
-      digitalWrite(E, 1);
-      digitalWrite(F, 1);
-      digitalWrite(G, 1);
-      break;
-    case 9:
-      digitalWrite(A, 1);
-      digitalWrite(B, 1);
-      digitalWrite(C, 1);
-      digitalWrite(D, 1);
-      digitalWrite(E, 0);
-      digitalWrite(F, 1);
-      digitalWrite(G, 1);
-      break;
-  }
+  display_number(11);
 }
 
 void test_lauflicht()
