@@ -1,5 +1,6 @@
 /*  TI_63_7Seg_ComK
-    7 Segment Display Test mit 5161AS
+    7 Segment Display Test mit 5161AS (Einzelsegment) und
+    5641AS (Vierersegment).
     LEDs sind Positivaktiv
     Vorwiderstand für LEDs jeweils 330 Ohm
 
@@ -30,7 +31,9 @@
 #define G 10
 #define DP 11
 
-#define TURN_OFF_DISPLAY 10
+#define TURN_OFF_SEGMENT 10
+// ungefähr 60Hz
+#define FRAME_TIME_MS 15
 
 uint16_t current_number = 0;
 
@@ -49,9 +52,10 @@ const uint8_t segment_assignments[] = {
   0b00000111,
   0b01111111,
   0b01101111,
-  };
+};
 
 /* Zeigt Zahl auf 7 Segment Display
+@param decimal_place Enables GND for each PCx pin
 @returns 0 Erfolgreich; >1 Fehler
 */ 
 uint8_t display_one_number(uint8_t number, uint8_t decimal_place)
@@ -66,15 +70,17 @@ uint8_t display_one_number(uint8_t number, uint8_t decimal_place)
     return 2;
   }
 
+  // GND aktivieren
   PORTC = ~(1 << decimal_place);
 
   // LED Zustand Code
   uint8_t segment_assignment = segment_assignments[number];
 
-  // Using PB0 to PB3
+  // LED pins
+  // Using PB0 - PB3
   PORTB = PORTB & 0xF0 | segment_assignment & 0x0F;
-  // Using PD4 to PD7
-  PORTD = PORTD & 0x10001111 | segment_assignment & 0b01110000;
+  // Using PD4 - PD6
+  PORTD = PORTD & 0b10001111 | segment_assignment & 0b01110000;
 
   return 0;
 }
@@ -103,7 +109,7 @@ void setup()
   digitalWrite(A3, 1);
   digitalWrite(A4, 1);
 
-  // display_one_number(TURN_OFF_DISPLAY, 0);
+  // display_one_number(TURN_OFF_SEGMENT, 0);
 }
 
 void loop()
@@ -113,13 +119,56 @@ void loop()
     current_number = 0;
   }
 
-  uint16_t digit_10 = current_number % 10;
-  uint16_t digit_100 = (current_number / 10) % 10;
+  uint8_t digit_1 = current_number % 10;
+  uint8_t digit_10 = (current_number / 10) % 10;
+  uint8_t digit_100 = (current_number / 100) % 10;
+  uint8_t digit_1000 = (current_number / 1000) % 10;
+  uint8_t digit_10000 = (current_number / 10000) % 10;
 
-  display_one_number(0, 0);
-  delay(1);
-  display_one_number(1, 1);
-  delay(200);
+  if (current_number < 1)
+  {
+    digit_10000 = TURN_OFF_SEGMENT;
+    digit_1000 = TURN_OFF_SEGMENT;
+    digit_100 = TURN_OFF_SEGMENT;
+    digit_10 = TURN_OFF_SEGMENT;
+    digit_1 = TURN_OFF_SEGMENT;
+  }
+  else if (current_number < 10)
+  {
+    digit_10000 = TURN_OFF_SEGMENT;
+    digit_1000 = TURN_OFF_SEGMENT;
+    digit_100 = TURN_OFF_SEGMENT;
+    digit_10 = TURN_OFF_SEGMENT;
+  }
+  else if (current_number < 100)
+  {
+    digit_10000 = TURN_OFF_SEGMENT;
+    digit_1000 = TURN_OFF_SEGMENT;
+    digit_100 = TURN_OFF_SEGMENT;
+  }
+  else if (current_number < 1000)
+  {
+    digit_10000 = TURN_OFF_SEGMENT;
+    digit_1000 = TURN_OFF_SEGMENT;
+  }
+  else if (current_number < 10000)
+  {
+    digit_10000 = TURN_OFF_SEGMENT;
+  }
+
+  for (uint16_t waited_for_ms = 0; waited_for_ms < 1000; waited_for_ms += FRAME_TIME_MS + 5)
+  {
+    display_one_number(digit_1, 0);
+    delay(FRAME_TIME_MS / 5);
+    display_one_number(digit_10, 1);
+    delay(FRAME_TIME_MS / 5);
+    display_one_number(digit_100, 2);
+    delay(FRAME_TIME_MS / 5);
+    display_one_number(digit_1000, 3);
+    delay(FRAME_TIME_MS / 5);
+    display_one_number(digit_10000, 4);
+    delay(FRAME_TIME_MS / 5);
+  }
 
   current_number++;
 }
