@@ -21,16 +21,6 @@
     GND4  8                                     A4          PC4
 */
 
-// Arduino Pins
-#define A 4
-#define B 5
-#define C 6
-#define D 7
-#define E 8
-#define F 9
-#define G 10
-#define DP 11
-
 #define TURN_OFF_SEGMENT 10
 // ungefähr 60Hz
 #define FRAME_TIME_MS 15
@@ -90,26 +80,12 @@ void setup()
   Serial.begin(9600);
   Serial.println("7 Segment Display");
 
-  pinMode(A, OUTPUT);
-  pinMode(B, OUTPUT);
-  pinMode(C, OUTPUT);
-  pinMode(D, OUTPUT);
-  pinMode(E, OUTPUT);
-  pinMode(F, OUTPUT);
-  pinMode(G, OUTPUT);
-  pinMode(DP, OUTPUT);
-  pinMode(A0, OUTPUT);
-  pinMode(A1, OUTPUT);
-  pinMode(A2, OUTPUT);
-  pinMode(A3, OUTPUT);
-  pinMode(A4, OUTPUT);
-  digitalWrite(A0, 1);
-  digitalWrite(A1, 1);
-  digitalWrite(A2, 1);
-  digitalWrite(A3, 1);
-  digitalWrite(A4, 1);
+  DDRB = 0x0F;
+  DDRD = 0xF0;
+  DDRC = 0b00011111;
 
-  // display_one_number(TURN_OFF_SEGMENT, 0);
+  // Ground Pins sind standartmäßig auf High
+  PORTC = 0b00011111;
 }
 
 void loop()
@@ -156,7 +132,7 @@ void loop()
     digit_10000 = TURN_OFF_SEGMENT;
   }
 
-  for (uint16_t waited_for_ms = 0; waited_for_ms < 1000; waited_for_ms += FRAME_TIME_MS + 5)
+  for (uint16_t waited_for_ms = 0; waited_for_ms < 200; waited_for_ms += FRAME_TIME_MS + 5)
   {
     display_one_number(digit_1, 0);
     delay(FRAME_TIME_MS / 5);
@@ -172,4 +148,3 @@ void loop()
 
   current_number++;
 }
-
