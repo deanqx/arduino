@@ -25,6 +25,7 @@
 #define TURN_OFF_DISPLAY 16
 // Zeit zwischen Wechsel der Anzeigen. 15ms entspricht ungefähr 60Hz
 #define DISPLAY_TIME_MS 3
+#define DISPLAY_TIME_MS 200
 
 /* Zuweisungsliste: Hexadezimal (0 - 9, A - F) zu LED Zustände; [TURN_OFF_DISPLAY] => aus
  Format:
@@ -88,6 +89,7 @@ void test_one_segment()
   for (uint16_t current_number = 0; current_number <= 15; current_number++)
   {
     display_one_number(current_number, 0);
+    delay(500);
   }
 }
 
@@ -109,50 +111,50 @@ void display_number(uint16_t number)
   // Nullen vor der ersten aktiven Anzeige ausschalten
   if (number < 1)
   {
-    digit_10000 = TURN_OFF_SEGMENT;
-    digit_1000 = TURN_OFF_SEGMENT;
-    digit_100 = TURN_OFF_SEGMENT;
-    digit_10 = TURN_OFF_SEGMENT;
-    digit_1 = TURN_OFF_SEGMENT;
+    digit_10000 = TURN_OFF_DISPLAY;
+    digit_1000 = TURN_OFF_DISPLAY;
+    digit_100 = TURN_OFF_DISPLAY;
+    digit_10 = TURN_OFF_DISPLAY;
+    digit_1 = TURN_OFF_DISPLAY;
   }
   else if (number < 10)
   {
-    digit_10000 = TURN_OFF_SEGMENT;
-    digit_1000 = TURN_OFF_SEGMENT;
-    digit_100 = TURN_OFF_SEGMENT;
-    digit_10 = TURN_OFF_SEGMENT;
+    digit_10000 = TURN_OFF_DISPLAY;
+    digit_1000 = TURN_OFF_DISPLAY;
+    digit_100 = TURN_OFF_DISPLAY;
+    digit_10 = TURN_OFF_DISPLAY;
   }
   else if (number < 100)
   {
-    digit_10000 = TURN_OFF_SEGMENT;
-    digit_1000 = TURN_OFF_SEGMENT;
-    digit_100 = TURN_OFF_SEGMENT;
+    digit_10000 = TURN_OFF_DISPLAY;
+    digit_1000 = TURN_OFF_DISPLAY;
+    digit_100 = TURN_OFF_DISPLAY;
   }
   else if (number < 1000)
   {
-    digit_10000 = TURN_OFF_SEGMENT;
-    digit_1000 = TURN_OFF_SEGMENT;
+    digit_10000 = TURN_OFF_DISPLAY;
+    digit_1000 = TURN_OFF_DISPLAY;
   }
   else if (number < 10000)
   {
-    digit_10000 = TURN_OFF_SEGMENT;
+    digit_10000 = TURN_OFF_DISPLAY;
   }
   
   // Über das Schalten von GND werden die verschiedenen Segmente gesteuert.
   // +5ms als geschätzter Wert für das Ausführen der Befehle.
   // Könnte mit interrupt besser gestoppt werden.
-  for (uint16_t waited_for_ms = 0; waited_for_ms < 200; waited_for_ms += SEGMENT_TIME_MS + 5)
+  for (uint16_t waited_for_ms = 0; waited_for_ms < 200; waited_for_ms += DISPLAY_TIME_MS + 5)
   {
     display_one_number(digit_1, 0);
-    delay(SEGMENT_TIME_MS);
+    delay(DISPLAY_TIME_MS);
     display_one_number(digit_10, 1);
-    delay(SEGMENT_TIME_MS);
+    delay(DISPLAY_TIME_MS);
     display_one_number(digit_100, 2);
-    delay(SEGMENT_TIME_MS);
+    delay(DISPLAY_TIME_MS);
     display_one_number(digit_1000, 3);
-    delay(SEGMENT_TIME_MS);
+    delay(DISPLAY_TIME_MS);
     display_one_number(digit_10000, 4);
-    delay(SEGMENT_TIME_MS);
+    delay(DISPLAY_TIME_MS);
   }
 }
 
@@ -180,6 +182,6 @@ void setup()
 
 void loop()
 {
-  // test_multiple_segments(0);
-  test_one_segment();
+  test_multiple_segments(0);
+  //test_one_segment();
 }
