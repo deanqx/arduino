@@ -1,23 +1,25 @@
-/*  TI_63_7Seg_ComK
-    7 Segment Display Test mit 5161AS (1x Display) und 5641AS (4x Displays).
-    LEDs sind Positivaktiv
-    Vorwiderstand für LEDs ist jeweils 330 Ohm
-
-    Pin Belegung
-    LED    5161AS    5641AS    ArduinoPin    MC_Pin
-    A      7         11        8             PB0
-    B      6         7         9             PB1
-    C      4         4         10            PB2
-    D      2         2         11            PB3
-    E      1         1         4             PD4
-    F      9         10        5             PD5
-    G      10        5         6             PD6
-    DP     5         3         7             PD7
-    GND0             6         A0            PC0
-    GND1             8         A1            PC1
-    GND2             9         A2            PC2
-    GND3             12        A3            PC3
-    GND4   8                   A4            PC4
+/* TI_63_7Seg_ComK
+ * 
+ * 7 Segment Display Test mit 5161AS (1x Display) und 5641AS (4x Displays).
+ * Beide Displays haben eine gemeinsame Kathode.
+ * LEDs sind Positivaktiv
+ * Vorwiderstand für LEDs ist jeweils 330 Ohm
+ *
+ * Pin Belegung
+ * LED    5161AS    5641AS    ArduinoPin    MC_Pin
+ * A      7         11        8             PB0
+ * B      6         7         9             PB1
+ * C      4         4         10            PB2
+ * D      2         2         11            PB3
+ * E      1         1         4             PD4
+ * F      9         10        5             PD5
+ * G      10        5         6             PD6
+ * DP     5         3         7             PD7
+ * GND0             6         A0            PC0
+ * GND1             8         A1            PC1
+ * GND2             9         A2            PC2
+ * GND3             12        A3            PC3
+ * GND4   8                   A4            PC4
 */
 
 #define TURN_OFF_DISPLAY 16
