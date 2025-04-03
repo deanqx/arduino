@@ -5,6 +5,8 @@
  * Vorwiderstand für LEDs ist jeweils 330 Ohm
  * Ein Schaltplan befindet sich im aktuellen Ordner.
  *
+ * GND wird mit Transitoren (BC337) geschalten. High entspricht GND.
+ *
  * Pin Belegung
  * LED    5161AS    5641AS    Arduino    MC
  * A      7         11        8          PB0
@@ -70,8 +72,8 @@ uint8_t display_one_number(uint8_t number, bool decimal_point, uint8_t decimal_p
     return 2;
   }
 
-  // GND aktivieren; negativ Logik
-  PORTC = ~(1 << decimal_place);
+  // GND aktivieren; positiv Logik
+  PORTC = 1 << decimal_place;
 
   if (decimal_point)
   {
@@ -190,9 +192,6 @@ void setup()
   DDRB = 0x0F;
   DDRD = 0xF0;
   DDRC = 0x1F;
-
-  // Ground Pins sind standardmäßig auf High
-  PORTC = 0x1F;
 }
 
 void loop()
