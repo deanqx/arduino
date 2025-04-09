@@ -196,6 +196,8 @@ void setup()
 
 void loop()
 {
+  //test_one_display(0, 0);
+
   // Punkt nach Einer anzeigen
   test_multiple_displays(0, 0);
 
