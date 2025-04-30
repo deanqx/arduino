@@ -55,7 +55,7 @@ const uint8_t number_to_segments[] = {
   0x71, // F
   0x00  // Aus
 };
-//
+
 // PORTB .. PORTD werden zusammen gelesen.
 uint8_t read_b;
 // uint8_t read_c;
@@ -111,7 +111,7 @@ uint8_t display_one_number(uint8_t number, bool decimal_point, uint8_t decimal_p
 // Von 0 bis 15 mit Hexadezimal Zählen. Auf Segment 0
 void test_one_display(uint8_t decimal_place, bool decimal_point)
 {
-  for (uint16_t current_number = 0; current_number <= 15; current_number++)
+  for (uint8_t current_number = 0; current_number <= 15; current_number++)
   {
     display_one_number(current_number, decimal_point, decimal_place);
     delay(TESTING_DELAY);
@@ -121,7 +121,7 @@ void test_one_display(uint8_t decimal_place, bool decimal_point)
 /* Zahl von 0 bis 99999 auf 5 Segmenten Anzeigen
  * @param decimal_point_after_place Index des Displays wo Punkt angezeigt werden soll. Deaktivieren mit -1
  */
-void display_number(uint16_t number, int8_t decimal_point_after_place, uint16_t show_for_ms)
+void display_number(int32_t number, int8_t decimal_point_after_place, uint16_t show_for_ms)
 {
   if (number > 99999) 
   {
@@ -186,9 +186,9 @@ void display_number(uint16_t number, int8_t decimal_point_after_place, uint16_t 
 }
 
 // Von 0 bis 99999 Zählen
-void test_multiple_displays(uint16_t start_number, uint8_t decimal_point_after_place)
+void test_multiple_displays(int32_t start_number, uint8_t decimal_point_after_place)
 {
-  for (uint16_t current_number = start_number; current_number <= 99999; current_number++)
+  for (int32_t current_number = start_number; current_number <= 99999; current_number++)
   {
     display_number(current_number, decimal_point_after_place, TESTING_DELAY);
   }
