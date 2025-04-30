@@ -31,6 +31,14 @@
 // Zeit zwischen Wechsel der LEDs in Test-Funktionen
 #define TESTING_DELAY 200
 
+/*
+ *
+ * Zum Beispiel:
+ * digits[0]=Einer
+ * digits[3]=Tausend
+ */
+typedef uint8_t Digits[5];
+
 /* Zuweisungsliste: Hexadezimal (0 - 9, A - F) zu LED Zustände; [TURN_OFF_DISPLAY] => aus
  Format:
  0x[PD7 - PD4][PB3 - PB0]
@@ -105,6 +113,11 @@ uint8_t display_one_number(uint8_t number, bool decimal_point, uint8_t decimal_p
   // Using PD4 - PD6
   set_d = read_d & 0b10001111 | segment_assignment & 0b01110000;
 
+  // TEMP
+  PORTB = set_b;
+  PORTC = set_c;
+  PORTD = set_d;
+
   return 0;
 }
 
@@ -118,69 +131,43 @@ void test_one_display(uint8_t decimal_place, bool decimal_point)
   }
 }
 
+// Maximum number is 99999
+// digits[n] => 10^n
+void int_to_digits(int32_t number, uint8_t* digits)
+{
+  // Dezimalstellen auf die verschiedenen Anzeigen aufteilen
+  digits[0] = number % 10;
+  digits[1] = (number / 10) % 10;
+  digits[2] = (number / 100) % 10;
+  digits[3] = (number / 1000) % 10;
+  digits[4] = (number / 10000) % 10;
+  
+  // Nullen vor der ersten aktiven Anzeige ausschalten
+  for (int i = 4, d = 10000; d > number; i--, d /= 10)
+  {
+    digits[i] = TURN_OFF_DISPLAY;
+  }
+}
+
 /* Zahl von 0 bis 99999 auf 5 Segmenten Anzeigen
  * @param decimal_point_after_place Index des Displays wo Punkt angezeigt werden soll. Deaktivieren mit -1
  */
-void display_number(int32_t number, int8_t decimal_point_after_place, uint16_t show_for_ms)
+void display_digits(uint8_t* digits, int8_t decimal_point_after_place, uint16_t show_for_ms)
 {
-  if (number > 99999) 
-  {
-    return 1;
-  }
-
-  // Dezimalstellen auf die verschiedenen Anzeigen aufteilen
-  uint8_t digit_1 = number % 10;
-  uint8_t digit_10 = (number / 10) % 10;
-  uint8_t digit_100 = (number / 100) % 10;
-  uint8_t digit_1000 = (number / 1000) % 10;
-  uint8_t digit_10000 = (number / 10000) % 10;
-  
-  // Nullen vor der ersten aktiven Anzeige ausschalten
-  if (number < 1)
-  {
-    digit_10000 = TURN_OFF_DISPLAY;
-    digit_1000 = TURN_OFF_DISPLAY;
-    digit_100 = TURN_OFF_DISPLAY;
-    digit_10 = TURN_OFF_DISPLAY;
-    digit_1 = TURN_OFF_DISPLAY;
-  }
-  else if (number < 10)
-  {
-    digit_10000 = TURN_OFF_DISPLAY;
-    digit_1000 = TURN_OFF_DISPLAY;
-    digit_100 = TURN_OFF_DISPLAY;
-    digit_10 = TURN_OFF_DISPLAY;
-  }
-  else if (number < 100)
-  {
-    digit_10000 = TURN_OFF_DISPLAY;
-    digit_1000 = TURN_OFF_DISPLAY;
-    digit_100 = TURN_OFF_DISPLAY;
-  }
-  else if (number < 1000)
-  {
-    digit_10000 = TURN_OFF_DISPLAY;
-    digit_1000 = TURN_OFF_DISPLAY;
-  }
-  else if (number < 10000)
-  {
-    digit_10000 = TURN_OFF_DISPLAY;
-  }
-  
   // Über das Schalten von GND werden die verschiedenen Displays gesteuert.
   // Ungefähr +0.3ms für das Ausführen der Befehle.
   // Könnte mit interrupt besser gestoppt werden.
   for (uint16_t waited_for_ms = 0; waited_for_ms < show_for_ms; waited_for_ms += 5 * DISPLAY_TIME_MS)
   {
-    display_one_number(digit_1, decimal_point_after_place == 0, 0);
+    display_one_number(digits[0], decimal_point_after_place == 0, 0);
     delay(DISPLAY_TIME_MS);
-    display_one_number(digit_10, decimal_point_after_place == 1, 1);
+    display_one_number(digits[1], decimal_point_after_place == 1, 1);
     delay(DISPLAY_TIME_MS);
-    display_one_number(digit_100, decimal_point_after_place == 2, 2);
+    display_one_number(digits[2], decimal_point_after_place == 2, 2);
     delay(DISPLAY_TIME_MS);
-    display_one_number(digit_1000, decimal_point_after_place == 3, 3);
+    display_one_number(digits[3], decimal_point_after_place == 3, 3);
     delay(DISPLAY_TIME_MS);
-    display_one_number(digit_10000, decimal_point_after_place == 4, 4);
+    display_one_number(digits[4], decimal_point_after_place == 4, 4);
     delay(DISPLAY_TIME_MS);
   }
 }
@@ -190,7 +177,10 @@ void test_multiple_displays(int32_t start_number, uint8_t decimal_point_after_pl
 {
   for (int32_t current_number = start_number; current_number <= 99999; current_number++)
   {
-    display_number(current_number, decimal_point_after_place, TESTING_DELAY);
+    uint8_t digits[5];
+    int_to_digits(current_number, digits);
+
+    display_digits(digits, decimal_point_after_place, TESTING_DELAY);
   }
 }
 
@@ -212,15 +202,15 @@ void loop()
   set_c = PORTC;
   set_d = PORTD;
   //test_one_display(0, 0);
+  
+  //test_one_display(0, 0);
+  //test_one_display(1, 0);
+  //test_one_display(2, 0);
+  //test_one_display(3, 0);
+  //test_one_display(4, 0);
 
   // Punkt nach Einer anzeigen
   test_multiple_displays(0, 0);
-
-  //test_one_display(0);
-  //test_one_display(1);
-  //test_one_display(2);
-  //test_one_display(3);
-  //test_one_display(4);
 
   PORTB = set_b;
   PORTC = set_c;
