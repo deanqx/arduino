@@ -55,6 +55,16 @@ const uint8_t number_to_segments[] = {
   0x71, // F
   0x00  // Aus
 };
+//
+// PORTB .. PORTD werden zusammen gelesen.
+uint8_t read_b;
+// uint8_t read_c;
+uint8_t read_d;
+
+// PORTB .. PORTD werden zusammen gesetzt.
+uint8_t set_b = 0;
+uint8_t set_c = 0;
+uint8_t set_d = 0;
 
 /* Zeigt Zahl auf 7 Segment Display an. Unterstützt Hexadezimalzahlen.
  * @param decimal_place Aktiviert GND für einen jeweiligen PCx Pin
@@ -73,17 +83,17 @@ uint8_t display_one_number(uint8_t number, bool decimal_point, uint8_t decimal_p
   }
 
   // GND aktivieren; positiv Logik
-  PORTC = 1 << decimal_place;
+  set_c = 1 << decimal_place;
 
   if (decimal_point)
   {
     // Punkt anschalten
-    PORTD |= 1 << PD7;
+    set_d = read_d | 1 << PD7;
   }
   else
   {
     // Punkt ausschalten
-    PORTD &= ~(1 << PD7);
+    set_d = read_d & ~(1 << PD7);
   }
 
   // LED Zustand Code
@@ -91,9 +101,9 @@ uint8_t display_one_number(uint8_t number, bool decimal_point, uint8_t decimal_p
 
   // LED pins
   // Using PB0 - PB3
-  PORTB = PORTB & 0xF0 | segment_assignment & 0x0F;
+  set_b = read_b & 0xF0 | segment_assignment & 0x0F;
   // Using PD4 - PD6
-  PORTD = PORTD & 0b10001111 | segment_assignment & 0b01110000;
+  set_d = read_d & 0b10001111 | segment_assignment & 0b01110000;
 
   return 0;
 }
@@ -196,6 +206,11 @@ void setup()
 
 void loop()
 {
+  read_b = PORTB;
+  read_d = PORTD;
+  set_b = PORTB;
+  set_c = PORTC;
+  set_d = PORTD;
   //test_one_display(0, 0);
 
   // Punkt nach Einer anzeigen
@@ -206,4 +221,8 @@ void loop()
   //test_one_display(2);
   //test_one_display(3);
   //test_one_display(4);
+
+  PORTB = set_b;
+  PORTC = set_c;
+  PORTD = set_d;
 }
