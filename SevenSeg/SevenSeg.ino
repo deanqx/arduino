@@ -31,14 +31,6 @@
 // Zeit zwischen Wechsel der LEDs in Test-Funktionen
 #define TESTING_DELAY 200
 
-/*
- *
- * Zum Beispiel:
- * digits[0]=Einer
- * digits[3]=Tausend
- */
-typedef uint8_t Digits[5];
-
 /* Zuweisungsliste: Hexadezimal (0 - 9, A - F) zu LED Zustände; [TURN_OFF_DISPLAY] => aus
  Format:
  0x[PD7 - PD4][PB3 - PB0]
@@ -70,9 +62,9 @@ uint8_t read_b;
 uint8_t read_d;
 
 // PORTB .. PORTD werden zusammen gesetzt.
-uint8_t set_b = 0;
-uint8_t set_c = 0;
-uint8_t set_d = 0;
+uint8_t set_b;
+uint8_t set_c;
+uint8_t set_d;
 
 /* Zeigt Zahl auf 7 Segment Display an. Unterstützt Hexadezimalzahlen.
  * @param decimal_place Aktiviert GND für einen jeweiligen PCx Pin
@@ -192,15 +184,16 @@ void setup()
   DDRB = 0x0F;
   DDRD = 0xF0;
   DDRC = 0x1F;
+
+  set_b = PORTB;
+  set_c = PORTC;
+  set_d = PORTD;
 }
 
 void loop()
 {
   read_b = PORTB;
   read_d = PORTD;
-  set_b = PORTB;
-  set_c = PORTC;
-  set_d = PORTD;
   //test_one_display(0, 0);
   
   //test_one_display(0, 0);
