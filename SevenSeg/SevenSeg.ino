@@ -29,6 +29,7 @@
 // number_to_segments[TURN_OFF_DISPLAY] == Aus 
 #define TURN_OFF_DISPLAY 16
 #define ADC_CHANNEL_6 6
+#define TEST_COUNT_UP 0
 
 // Dezimalpunkt nach Stelle x
 #define DECIMAL_POINT_AFTER_PLACE -1
@@ -158,44 +159,34 @@ void int_to_digits(int32_t number)
 // @param decimal_point_after_place Deaktivieren mit -1
 void display_number(uint32_t curr_ms)
 {
-    if (curr_ms - prev_display_ms >= DISPLAY_TIME_MS)
-    {
-      prev_display_ms = curr_ms;
+  if (digits.negative)
+  {
+    port_c |= 1 << PC5;
+  }
+  else
+  {
+    port_c &= ~(1 << PC5);
+  }
 
-      if (digits.negative)
-      {
-        port_c |= 1 << PC5;
-      }
-      else
-      {
-        port_c &= ~(1 << PC5);
-      }
+  display_single_number(digits.d[curr_digit], curr_digit, DECIMAL_POINT_AFTER_PLACE == curr_digit);
 
-      display_single_number(digits.d[curr_digit], curr_digit, DECIMAL_POINT_AFTER_PLACE == curr_digit);
-
-      curr_digit++;
-      if (curr_digit > 4)
-      {
-        curr_digit = 0;
-      }
-    }
+  curr_digit++;
+  if (curr_digit > 4)
+  {
+    curr_digit = 0;
+  }
 }
 
 // Zahl hochzählen (non blocking delay)
 // @param decimal_point_after_place Deaktivieren mit -1
 void test_count_up(uint32_t curr_ms)
 {
-  if (curr_ms - prev_number_ms >= COUNTING_DELAY_MS)
+  int_to_digits(curr_number);
+
+  curr_number++;
+  if (curr_number > 99999)
   {
-    prev_number_ms = curr_ms;
-
-    int_to_digits(curr_number);
-
-    curr_number++;
-    if (curr_number > 99999)
-    {
-      curr_number = -9999;
-    }
+    curr_number = -9999;
   }
 }
 
@@ -227,27 +218,38 @@ void setup(void)
 
 void loop(void)
 {
-    port_b = PORTB;
-    port_c = PORTC;
-    port_d = PORTD;
+  port_b = PORTB;
+  port_c = PORTC;
+  port_d = PORTD;
 
-    // current_ms - aktuelle Millisekunden
-    const uint32_t curr_ms = millis();
+  // current_ms - aktuelle Millisekunden
+  const uint32_t curr_ms = millis();
 
-    // test_count_up(curr_ms);
+#if TEST_COUNT_UP
+  if (curr_ms - prev_number_ms >= COUNTING_DELAY_MS)
+  {
+    prev_number_ms = curr_ms;
+  
+    test_count_up(curr_ms);
+  }
+#else
+  // Warten bis ADC gelesen wurde
+  if (!(ADCSRA & (1 << ADSC)))
+  {
+    int_to_digits(ADC);
 
-    // Warten bis ADC gelesen wurde
-    if (!(ADCSRA & (1 << ADSC)))
-    {
-      int_to_digits(ADC);
+    // ADC Umwandelung starten
+    ADCSRA |= (1 << ADSC);
+  }
+#endif
 
-      // ADC Umwandelung starten
-      ADCSRA |= (1 << ADSC);
-    }
-
+  if (curr_ms - prev_display_ms >= DISPLAY_TIME_MS)
+  {
+    prev_display_ms = curr_ms;
     display_number(curr_ms);
+  }
 
-    PORTB = port_b;
-    PORTC = port_c;
-    PORTD = port_d;
+  PORTB = port_b;
+  PORTC = port_c;
+  PORTD = port_d;
 }
