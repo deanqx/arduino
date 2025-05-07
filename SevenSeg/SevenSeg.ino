@@ -59,13 +59,18 @@ const uint8_t number_to_segments[] = {
 
 // PORTB .. PORTD werden zusammen gelesen.
 uint8_t read_b;
-// uint8_t read_c;
+uint8_t read_c;
 uint8_t read_d;
 
 // PORTB .. PORTD werden zusammen gesetzt.
 uint8_t set_b;
 uint8_t set_c;
 uint8_t set_d;
+
+struct Digits {
+  uint8_t d[5];
+  bool negative;
+};
 
 /* Zeigt Zahl auf 7 Segment Display an. Unterstützt Hexadezimalzahlen.
  * @param decimal_place Aktiviert GND für einen jeweiligen PCx Pin
@@ -126,41 +131,54 @@ void test_one_display(uint8_t decimal_place, bool decimal_point)
 
 // Maximum number is 99999
 // digits[n] => 10^n
-void int_to_digits(int32_t number, uint8_t* digits)
+void int_to_digits(int32_t number, Digits* digits)
 {
+  const uint32_t number_abs = abs(number);
+
   // Dezimalstellen auf die verschiedenen Anzeigen aufteilen
-  digits[0] = number % 10;
-  digits[1] = (number / 10) % 10;
-  digits[2] = (number / 100) % 10;
-  digits[3] = (number / 1000) % 10;
-  digits[4] = (number / 10000) % 10;
+  digits->d[0] = number_abs % 10;
+  digits->d[1] = (number_abs / 10) % 10;
+  digits->d[2] = (number_abs / 100) % 10;
+  digits->d[3] = (number_abs / 1000) % 10;
+  digits->d[4] = (number_abs / 10000) % 10;
   
   // Nullen vor der ersten aktiven Anzeige ausschalten
-  for (int i = 4, d = 10000; d > number; i--, d /= 10)
+  for (uint8_t i = 4, d = 10000; false && d > number_abs; i--, d /= 10)
   {
-    digits[i] = TURN_OFF_DISPLAY;
+    digits->d[i] = TURN_OFF_DISPLAY;
   }
+
+  digits->negative = number < 0;
 }
 
 /* Zahl von 0 bis 99999 auf 5 Segmenten Anzeigen
  * @param decimal_point_after_place Index des Displays wo Punkt angezeigt werden soll. Deaktivieren mit -1
  */
-void display_digits(uint8_t* digits, int8_t decimal_point_after_place, uint16_t show_for_ms)
+void display_digits(Digits* digits, int8_t decimal_point_after_place, uint16_t show_for_ms)
 {
   // Über das Schalten von GND werden die verschiedenen Displays gesteuert.
   // Ungefähr +0.3ms für das Ausführen der Befehle.
   // Könnte mit interrupt besser gestoppt werden.
   for (uint16_t waited_for_ms = 0; waited_for_ms < show_for_ms; waited_for_ms += 5 * DISPLAY_TIME_MS)
   {
-    display_one_number(digits[0], decimal_point_after_place == 0, 0);
+    if (digits->negative)
+    {
+      set_c = read_c | (1 << PC5);
+    }
+    else
+    {
+      set_c = read_c & ~(1 << PC5);
+    }
+
+    display_one_number(digits->d[0], decimal_point_after_place == 0, 0);
     delay(DISPLAY_TIME_MS);
-    display_one_number(digits[1], decimal_point_after_place == 1, 1);
+    display_one_number(digits->d[1], decimal_point_after_place == 1, 1);
     delay(DISPLAY_TIME_MS);
-    display_one_number(digits[2], decimal_point_after_place == 2, 2);
+    display_one_number(digits->d[2], decimal_point_after_place == 2, 2);
     delay(DISPLAY_TIME_MS);
-    display_one_number(digits[3], decimal_point_after_place == 3, 3);
+    display_one_number(digits->d[3], decimal_point_after_place == 3, 3);
     delay(DISPLAY_TIME_MS);
-    display_one_number(digits[4], decimal_point_after_place == 4, 4);
+    display_one_number(digits->d[4], decimal_point_after_place == 4, 4);
     delay(DISPLAY_TIME_MS);
   }
 }
@@ -170,10 +188,10 @@ void test_multiple_displays(int32_t start_number, uint8_t decimal_point_after_pl
 {
   for (int32_t current_number = start_number; current_number <= 99999; current_number++)
   {
-    uint8_t digits[5];
-    int_to_digits(current_number, digits);
+    Digits digits;
+    int_to_digits(current_number, &digits);
 
-    display_digits(digits, decimal_point_after_place, TESTING_DELAY);
+    display_digits(&digits, decimal_point_after_place, TESTING_DELAY);
   }
 }
 
@@ -194,6 +212,7 @@ void setup()
 void loop()
 {
   read_b = PORTB;
+  read_c = PORTC;
   read_d = PORTD;
 
   //test_one_display(0, 0);
@@ -205,7 +224,7 @@ void loop()
   //test_one_display(4, 0);
 
   // Punkt nach Einer anzeigen
-  test_multiple_displays(0, 0);
+  test_multiple_displays(-900, 0);
 
   PORTB = set_b;
   PORTC = set_c;
