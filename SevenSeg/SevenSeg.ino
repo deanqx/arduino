@@ -157,8 +157,8 @@ void setup()
 
   Digits digits;
 
-  uint8_t current_number = -900;
-  uint8_t current_digit = 0;
+  int32_t cur_number = -10;
+  uint8_t cur_digit = 0;
 
   while (1)
   {
@@ -167,24 +167,24 @@ void setup()
     read_d = PORTD;
     set_c = read_c | (1 << PC5);
 
-    const uint32_t current_ms = millis();
+    const uint32_t cur_ms = millis();
 
-    if (current_ms - prev_number_ms >= TESTING_DELAY)
+    if (cur_ms - prev_number_ms >= TESTING_DELAY)
     {
-      prev_number_ms = current_ms;
+      prev_number_ms = cur_ms;
 
-      int_to_digits(current_number, &digits);
+      int_to_digits(cur_number, &digits);
 
-      current_number++;
-      if (current_number > 99999)
+      cur_number++;
+      if (cur_number > 99999)
       {
-        current_number = -9999;
+        cur_number = -9999;
       }
     }
 
-    if (current_ms - prev_display_ms >= DISPLAY_TIME_MS)
+    if (cur_ms - prev_display_ms >= DISPLAY_TIME_MS)
     {
-      prev_display_ms = current_ms;
+      prev_display_ms = cur_ms;
 
       if (digits.negative)
       {
@@ -195,12 +195,12 @@ void setup()
         set_c = read_c & ~(1 << PC5);
       }
 
-      display_one_number(digits.d[current_digit], decimal_point_after_place == current_digit, current_digit);
+      display_one_number(digits.d[cur_digit], decimal_point_after_place == cur_digit, cur_digit);
 
-      current_digit++;
-      if (current_digit > 4)
+      cur_digit++;
+      if (cur_digit > 4)
       {
-        current_digit = 0;
+        cur_digit = 0;
       }
     }
 
