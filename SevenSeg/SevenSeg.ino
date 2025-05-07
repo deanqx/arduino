@@ -23,15 +23,17 @@
  * GND3               12        A3         PC3
  * GND4     8                   A4         PC4
  * Neg-LED                      A5         PC5
+ * Poti                         A6         ADC6
 */
 
 // number_to_segments[TURN_OFF_DISPLAY] == Aus 
 #define TURN_OFF_DISPLAY 16
+#define ADC_CHANNEL_6 6
 
 // Dezimalpunkt nach Stelle x
 #define DECIMAL_POINT_AFTER_PLACE -1
 // Zeit zwischen Wechsel der Anzeigen. 3ms * 5 = 15ms entspricht ungefähr 60Hz
-#define DISPLAY_TIME_MS 3
+#define DISPLAY_TIME_MS 2
 // Verzögerung bis Zahl hochgezählt wird
 #define COUNTING_DELAY_MS 200
 
@@ -197,7 +199,20 @@ void test_count_up(uint32_t curr_ms)
   }
 }
 
-void setup()
+void adc_init(void)
+{
+  // https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf#page=217
+  
+  // AVcc als referenze Spannung (5V), und ADC6 (MUX6) auswählen
+  // REFS = 0b01 => 5V
+  // MUX = 0b0110 => ADC6
+  ADMUX = (1 << REFS0) | ADC_CHANNEL_6;
+
+  // ADC aktivieren, Umwandelung starten, prescaler = 0b111 für 125kHz ADC clock @16MHz system clock
+  ADCSRA = (1 << ADEN) | (1 << ADSC) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
+}
+
+void setup(void)
 {
   Serial.begin(9600);
   Serial.println("7 Segment Display");
@@ -206,9 +221,11 @@ void setup()
   DDRB = 0x0F;
   DDRC = 0x3F;
   DDRD = 0xF0;
+
+  adc_init();
 }
 
-void loop()
+void loop(void)
 {
     port_b = PORTB;
     port_c = PORTC;
@@ -217,7 +234,17 @@ void loop()
     // current_ms - aktuelle Millisekunden
     const uint32_t curr_ms = millis();
 
-    test_count_up(curr_ms);
+    // test_count_up(curr_ms);
+
+    // Warten bis ADC gelesen wurde
+    if (!(ADCSRA & (1 << ADSC)))
+    {
+      int_to_digits(ADC);
+
+      // ADC Umwandelung starten
+      ADCSRA |= (1 << ADSC);
+    }
+
     display_number(curr_ms);
 
     PORTB = port_b;
