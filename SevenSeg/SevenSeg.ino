@@ -111,22 +111,7 @@ uint8_t display_one_number(uint8_t number, bool decimal_point, uint8_t decimal_p
   // Using PD4 - PD6
   set_d = read_d & 0b10001111 | segment_assignment & 0b01110000;
 
-  // TEMP
-  PORTB = set_b;
-  PORTC = set_c;
-  PORTD = set_d;
-
   return 0;
-}
-
-// Von 0 bis 15 mit Hexadezimal Zählen. Auf Segment 0
-void test_one_display(uint8_t decimal_place, bool decimal_point)
-{
-  for (uint8_t current_number = 0; current_number <= 15; current_number++)
-  {
-    display_one_number(current_number, decimal_point, decimal_place);
-    delay(TESTING_DELAY);
-  }
 }
 
 // Maximum number is 99999
@@ -143,56 +128,13 @@ void int_to_digits(int32_t number, Digits* digits)
   digits->d[4] = (number_abs / 10000) % 10;
   
   // Nullen vor der ersten aktiven Anzeige ausschalten
-  for (uint8_t i = 4, d = 10000; false && d > number_abs; i--, d /= 10)
+  int32_t d = 10000;
+  for (uint8_t i = 4; d > number_abs; i--, d /= 10)
   {
     digits->d[i] = TURN_OFF_DISPLAY;
   }
 
   digits->negative = number < 0;
-}
-
-/* Zahl von 0 bis 99999 auf 5 Segmenten Anzeigen
- * @param decimal_point_after_place Index des Displays wo Punkt angezeigt werden soll. Deaktivieren mit -1
- */
-void display_digits(Digits* digits, int8_t decimal_point_after_place, uint16_t show_for_ms)
-{
-  // Über das Schalten von GND werden die verschiedenen Displays gesteuert.
-  // Ungefähr +0.3ms für das Ausführen der Befehle.
-  // Könnte mit interrupt besser gestoppt werden.
-  for (uint16_t waited_for_ms = 0; waited_for_ms < show_for_ms; waited_for_ms += 5 * DISPLAY_TIME_MS)
-  {
-    if (digits->negative)
-    {
-      set_c = read_c | (1 << PC5);
-    }
-    else
-    {
-      set_c = read_c & ~(1 << PC5);
-    }
-
-    display_one_number(digits->d[0], decimal_point_after_place == 0, 0);
-    delay(DISPLAY_TIME_MS);
-    display_one_number(digits->d[1], decimal_point_after_place == 1, 1);
-    delay(DISPLAY_TIME_MS);
-    display_one_number(digits->d[2], decimal_point_after_place == 2, 2);
-    delay(DISPLAY_TIME_MS);
-    display_one_number(digits->d[3], decimal_point_after_place == 3, 3);
-    delay(DISPLAY_TIME_MS);
-    display_one_number(digits->d[4], decimal_point_after_place == 4, 4);
-    delay(DISPLAY_TIME_MS);
-  }
-}
-
-// Von -9999 bis 99999 Zählen
-void test_multiple_displays(int32_t start_number, uint8_t decimal_point_after_place)
-{
-  for (int32_t current_number = start_number; current_number <= 99999; current_number++)
-  {
-    Digits digits;
-    int_to_digits(current_number, &digits);
-
-    display_digits(&digits, decimal_point_after_place, TESTING_DELAY);
-  }
 }
 
 void setup()
@@ -201,32 +143,73 @@ void setup()
   Serial.println("7 Segment Display");
 
   DDRB = 0x0F;
+  DDRC = 0x3F;
   DDRD = 0xF0;
-  DDRC = 0x1F;
 
   set_b = PORTB;
   set_c = PORTC;
   set_d = PORTD;
+
+  const uint8_t decimal_point_after_place = 0;
+
+  uint32_t prev_number_ms = 0;
+  uint32_t prev_display_ms = 0;
+
+  Digits digits;
+
+  uint8_t current_number = -900;
+  uint8_t current_digit = 0;
+
+  while (1)
+  {
+    read_b = PORTB;
+    read_c = PORTC;
+    read_d = PORTD;
+    set_c = read_c | (1 << PC5);
+
+    const uint32_t current_ms = millis();
+
+    if (current_ms - prev_number_ms >= TESTING_DELAY)
+    {
+      prev_number_ms = current_ms;
+
+      int_to_digits(current_number, &digits);
+
+      current_number++;
+      if (current_number > 99999)
+      {
+        current_number = -9999;
+      }
+    }
+
+    if (current_ms - prev_display_ms >= DISPLAY_TIME_MS)
+    {
+      prev_display_ms = current_ms;
+
+      if (digits.negative)
+      {
+        set_c = read_c | (1 << PC5);
+      }
+      else
+      {
+        set_c = read_c & ~(1 << PC5);
+      }
+
+      display_one_number(digits.d[current_digit], decimal_point_after_place == current_digit, current_digit);
+
+      current_digit++;
+      if (current_digit > 4)
+      {
+        current_digit = 0;
+      }
+    }
+
+    PORTB = set_b;
+    PORTC = set_c;
+    PORTD = set_d;
+  }
 }
 
 void loop()
 {
-  read_b = PORTB;
-  read_c = PORTC;
-  read_d = PORTD;
-
-  //test_one_display(0, 0);
-  
-  //test_one_display(0, 0);
-  //test_one_display(1, 0);
-  //test_one_display(2, 0);
-  //test_one_display(3, 0);
-  //test_one_display(4, 0);
-
-  // Punkt nach Einer anzeigen
-  test_multiple_displays(-900, 0);
-
-  PORTB = set_b;
-  PORTC = set_c;
-  PORTD = set_d;
 }
