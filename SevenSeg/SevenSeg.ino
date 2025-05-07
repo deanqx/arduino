@@ -8,20 +8,21 @@
  * GND wird mit Transitoren (BC337) geschalten. High entspricht GND.
  *
  * Pin Belegung
- * LED    5161AS    5641AS    Arduino    MC
- * A      7         11        8          PB0
- * B      6         7         9          PB1
- * C      4         4         10         PB2
- * D      2         2         11         PB3
- * E      1         1         4          PD4
- * F      9         10        5          PD5
- * G      10        5         6          PD6
- * DP     5         3         7          PD7
- * GND0             6         A0         PC0
- * GND1             8         A1         PC1
- * GND2             9         A2         PC2
- * GND3             12        A3         PC3
- * GND4   8                   A4         PC4
+ * LED      5161AS    5641AS    Arduino    MC
+ * A        7         11        8          PB0
+ * B        6         7         9          PB1
+ * C        4         4         10         PB2
+ * D        2         2         11         PB3
+ * E        1         1         4          PD4
+ * F        9         10        5          PD5
+ * G        10        5         6          PD6
+ * DP       5         3         7          PD7
+ * GND0               6         A0         PC0
+ * GND1               8         A1         PC1
+ * GND2               9         A2         PC2
+ * GND3               12        A3         PC3
+ * GND4     8                   A4         PC4
+ * Neg-LED                      A5         PC5
 */
 
 // number_to_segments[TURN_OFF_DISPLAY] == Aus 
@@ -33,7 +34,7 @@
 
 /* Zuweisungsliste: Hexadezimal (0 - 9, A - F) zu LED Zustände; [TURN_OFF_DISPLAY] => aus
  Format:
- 0x[PD7 - PD4][PB3 - PB0]
+ 0x[PD7 - PD4][PB4 - PB0]
  0b[DP,G,F,E,D,C,B,A]
 */
 const uint8_t number_to_segments[] = {
@@ -164,7 +165,7 @@ void display_digits(uint8_t* digits, int8_t decimal_point_after_place, uint16_t 
   }
 }
 
-// Von 0 bis 99999 Zählen
+// Von -9999 bis 99999 Zählen
 void test_multiple_displays(int32_t start_number, uint8_t decimal_point_after_place)
 {
   for (int32_t current_number = start_number; current_number <= 99999; current_number++)
@@ -194,6 +195,7 @@ void loop()
 {
   read_b = PORTB;
   read_d = PORTD;
+
   //test_one_display(0, 0);
   
   //test_one_display(0, 0);
