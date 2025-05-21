@@ -177,18 +177,30 @@ void messwertAusgabe(int16_t messwert)
   if(messwert > 9)   { Z  = messwert/10;     messwert = messwert -(Z * 10); }
   E = messwert;
 
-  // Nullen vor der ersten Stelle Ausschalten
-
   schiebe = 1;
-  umsetzungsTabelle(E,0);   delay(1);  AnzeigeOFF();
+  AnzeigeOFF();
+  umsetzungsTabelle(E,0);   
+  delay(1);  
+
   schiebe <<= 1;
-  umsetzungsTabelle(Z,0);   delay(1);  AnzeigeOFF();
+  AnzeigeOFF();
+  if (messwert >= 10) umsetzungsTabelle(Z,0);   
+  delay(1);
+
   schiebe <<= 1;
-  umsetzungsTabelle(H,0);   delay(1);  AnzeigeOFF();
+  AnzeigeOFF();
+  if (messwert >= 100) umsetzungsTabelle(H,0);   
+  delay(1);  
+
   schiebe <<= 1;
-  umsetzungsTabelle(T,0);   delay(1);  AnzeigeOFF();
+  AnzeigeOFF();
+  if (messwert >= 1000) umsetzungsTabelle(T,0);   
+  delay(1);  
+
   schiebe <<= 1;
-  umsetzungsTabelle(ZT,0);  delay(1);  AnzeigeOFF();
+  AnzeigeOFF();
+  if (messwert >= 10000) umsetzungsTabelle(ZT,0);  
+  delay(1);  
 }
 
 void loop()  // Zerlegung des eingelesenen Analogwertes in die einzelnen Potenzen (Dekaden)
