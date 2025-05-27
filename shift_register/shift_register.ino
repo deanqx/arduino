@@ -16,8 +16,7 @@
 // 21 entspricht 0b01001000
 const byte content = 0x48;
 
-void setup()
-{
+void setup() {
   Serial.begin(9600);
 
   // Enable on board LED
@@ -28,22 +27,20 @@ void setup()
   PORTC = 1 << PIN_NEG_CLR;
 }
 
-void loop()
-{
+void loop() {
   PORTC &= ~(1 << PIN_NEG_CLR);
   delay(HALF_CLK_MS);
 
   PORTC |= 1 << PIN_NEG_CLR;
   delay(HALF_CLK_MS);
 
-  for (uint8_t bit_index = 0; bit_index < 8; bit_index++)
-  {
+  for (uint8_t bit_index = 0; bit_index < 8; bit_index++) {
     // Serial data bit
     const byte data_bit = (content >> bit_index) & 0x01;
 
     // Clear, then set PIN_DATA
     PORTC = (PORTC & ~(1 << PIN_DATA)) | data_bit << PIN_DATA;
-    
+
     // Clock high
     PORTC |= 1 << PIN_CLK;
     Serial.println("Clock high");
@@ -55,8 +52,7 @@ void loop()
     delay(HALF_CLK_MS);
   }
 
-  // Finished
-  PORTB |= 1 << PB5; 
+  PORTB |= 1 << PB5;
   // Stop after first iteration
   while (1);
   delay(10000);
