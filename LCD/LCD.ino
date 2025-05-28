@@ -40,13 +40,23 @@ void setup() {
   lcd.createChar(1, Character2);
   Serial.println("LCD wurde initialisiert");
 
-  lcd.setCursor(0, 0);    /* Set cursor to column 0 row 0 */
-  lcd.print("Hello!!!!"); /* Print data on display */
-  Serial.println("Hello!!!!");
-  lcd.setCursor(0, 1);
-  lcd.write(byte(0)); /* Write a character to display */
-  lcd.write(1);
+  //lcd.setCursor(0, 0);    /* Set cursor to column 0 row 0 */
+  //lcd.print("Hello!!!!"); /* Print data on display */
+  //Serial.println("Hello!!!!");
+  //lcd.setCursor(0, 1);
+  //lcd.write(byte(0)); /* Write a character to display */
+  //lcd.write(1);
 }
 
 void loop() {
+  String content = Serial.readStringUntil('\n');
+
+  // Wurde nichts gesendet?
+  if (content.length() == 0) {
+    return;
+  }
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(content);
 }
