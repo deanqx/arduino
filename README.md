@@ -9,6 +9,8 @@ default_fqbn: arduino:avr:uno
 
 # Compile and upload
 
+Adjust the `/dev/ttyUSB0` with your USB port.
+
 ```bash
-arduino-cli upload . -p /dev/usb
+arduino-cli compile . -u -p /dev/ttyUSB0
 ```
