@@ -23,6 +23,11 @@ K           GND
 */
 
 #include <LiquidCrystal.h>
+
+// Maximum PROGRAM_NAME length is 16
+#define PROGRAM_NAME0 "TI_71_LCD_8Bit_U"
+#define PROGRAM_NAME1 "ART"
+
 /* Create object named lcd of the class LiquidCrystal */
 LiquidCrystal lcd(13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3); /* For 8-bit mode */
 //LiquidCrystal lcd(13, 12, 11, 6, 5, 4, 3);      /* For 4-bit mode */
@@ -32,20 +37,19 @@ unsigned char Character2[8] = { 0x01, 0x03, 0x07, 0x1F, 0x1F, 0x07, 0x03, 0x01 }
 
 void setup() {
   Serial.begin(9600);
-  Serial.println("LCD Display Test");
+  Serial.print(PROGRAM_NAME0);
+  Serial.println(PROGRAM_NAME1);
 
-  lcd.begin(16, 2);              /* Initialize 16x2 LCD */
-  lcd.clear();                   /* Clear the LCD */
-  lcd.createChar(0, Character1); /* Generate custom character */
+  lcd.begin(16, 2);
+  lcd.clear();
+  lcd.createChar(0, Character1);
   lcd.createChar(1, Character2);
   Serial.println("LCD wurde initialisiert");
 
-  //lcd.setCursor(0, 0);    /* Set cursor to column 0 row 0 */
-  //lcd.print("Hello!!!!"); /* Print data on display */
-  //Serial.println("Hello!!!!");
-  //lcd.setCursor(0, 1);
-  //lcd.write(byte(0)); /* Write a character to display */
-  //lcd.write(1);
+  lcd.setCursor(0, 0);
+  lcd.print(PROGRAM_NAME0);
+  lcd.setCursor(0, 1);
+  lcd.print(PROGRAM_NAME1);
 }
 
 void loop() {
@@ -56,6 +60,7 @@ void loop() {
     return;
   }
 
+  Serial.println("Setting content");
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print(content);
