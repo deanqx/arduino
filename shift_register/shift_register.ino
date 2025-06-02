@@ -1,4 +1,4 @@
-/* ET_49_
+/* ET_49_74HC595_SPI_16bit
  *
  * Pinbelegung
  *
@@ -23,10 +23,16 @@
 // 21 entspricht 0100 1000 nach ET_48
 //const byte data = 0x48;
 
-// entspricht die Zahl 2
-// const byte data = 0b01011011;
+// 01011011 entspricht die Zahl 2
+//const uint16_t data = { 0x005B };
+//const uint16_t data = { 0x5B5B };
+// const uint16_t data = { 0xFFFF };
 
-const byte data = 0x37; // 0011 0111
+// Aufgabe 1: (0x37 = 0011 0111)
+// const uint16_t data = 0x0037;
+
+// QI und QII ansteuern (0x594F = 0101 1001 0100 1111)
+const uint16_t data = 0x594F;
 
 void transmit_data() {
   PORTC &= ~(1 << PIN_CLR_LA);
@@ -35,7 +41,7 @@ void transmit_data() {
   PORTC |= 1 << PIN_CLR_LA;
   delay(THIRD_CLK_MS);
 
-  for (int8_t bit_index = 7; bit_index >= 0; bit_index--) {
+  for (int8_t bit_index = 16; bit_index >= 0; bit_index--) {
     // Serial data bit
     const byte data_bit = (data >> bit_index) & 0x01;
 
