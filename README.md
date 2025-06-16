@@ -53,5 +53,5 @@ bear -- make build
 Warning: You can't upload and read UART at the same time.
 
 ```
-screen /dev/ttyUSB0 115200
+minicom -D /dev/ttyUSB0 -b 19200
 ```
