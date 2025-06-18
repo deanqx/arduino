@@ -1,4 +1,6 @@
 /*
+ * Warnung: Boolische True-Werte müssen den Wert 1 haben
+ *
  * Zuweisungsliste:
  *
  * Arduino | MCU Pin | Bauteil Pin | Bezeichnung
@@ -24,7 +26,13 @@
  * A5        PC5
  * */
 
-#define EXERCISE 9
+#define PIN_S0_AUS PC0
+#define PIN_S1_RECHTS PC1
+#define PIN_S2_LINKS PC2
+#define PIN_Q1_RECHTS PC3
+#define PIN_Q2_LINKS PC4
+
+#define EXERCISE 11
 
 #if EXERCISE == 8
 
@@ -33,9 +41,6 @@
 
 #include "uartAT328p.h"
 #include <stdbool.h>
-
-// Taster S0 bis S2
-bool s0, s1, s2;
 
 int main(void) {
   // GPIO Ausgänge setzen
@@ -50,17 +55,18 @@ int main(void) {
   usart_puts(INFO);
 
   // Port Eingänge in Variablen speichern
-  s0 = !((PORTC >> PB0) & 0x01);
-  s1 = !((PORTC >> PB1) & 0x01);
-  s2 = !((PORTC >> PB2) & 0x01);
+  // Taster S0 bis S2
+  bool s0_aus = !((PINC >> PIN_S0_AUS) & 0x01);
+  bool s1_rechts = !((PINC >> PIN_S1_RECHTS) & 0x01);
+  bool s2_links = !((PINC >> PIN_S2_LINKS) & 0x01);
 
   // Taster Zustände senden
   usart_puts("S0=");
-  usart_itoa(s0);
+  usart_itoa(s0_aus);
   usart_puts("; S1=");
-  usart_itoa(s1);
+  usart_itoa(s1_rechts);
   usart_puts("; S2=");
-  usart_itoa(s2);
+  usart_itoa(s2_links);
   usart_puts("\r\n");
 }
 
@@ -72,11 +78,9 @@ int main(void) {
 #include "uartAT328p.h"
 #include <stdbool.h>
 
-// Taster S0 bis S2
-bool s0, s1, s2;
-uint8_t port_b;
-uint8_t port_c;
-uint8_t port_d;
+// Relais Zustand
+bool q1_rechts = 0;
+bool q2_links = 0;
 
 int main(void) {
   // GPIO Ausgänge setzen
@@ -90,49 +94,309 @@ int main(void) {
   // Version über UART senden
   usart_puts(INFO);
 
-  while (1)
-  {
-    port_b = PORTB;
-    port_c = PORTC;
-    port_d = PORTD;
-
+  while (1) {
     // Port Eingänge in Variablen speichern
-    s0 = !((port_c >> PB0) & 0x01);
-    s1 = !((port_c >> PB1) & 0x01);
-    s2 = !((port_c >> PB2) & 0x01);
+    // Taster S0 bis S2 (1=gedrückt)
+    bool s0_aus = !((PINC >> PIN_S0_AUS) & 0x01);
+    bool s1_rechts = !((PINC >> PIN_S1_RECHTS) & 0x01);
+    bool s2_links = !((PINC >> PIN_S2_LINKS) & 0x01);
+
+    if (s0_aus) {
+      // Aus
+      q1_rechts = 0;
+      q2_links = 0;
+    } else if (s1_rechts) {
+      // Rechtsrum
+      q1_rechts = 1;
+      q2_links = 0;
+    } else if (s2_links) {
+      // Linksrum
+      q1_rechts = 0;
+      q2_links = 1;
+    }
 
     // Taster Zustände senden
     usart_puts("S0=");
-    usart_itoa(s0);
+    usart_itoa(s0_aus);
     usart_puts("; S1=");
-    usart_itoa(s1);
+    usart_itoa(s1_rechts);
     usart_puts("; S2=");
-    usart_itoa(s2);
+    usart_itoa(s2_links);
     usart_puts("\r\n");
 
-    if (s0)
-    {
-        // Rechts- und Linkslauf ausschalten
-        port_c &= ~(1 << PB3 | 1 << PB4);
-    }
-    else if (s1)
-    {
-        // Erst beide richtung ausschalten
-        port_c &= ~(1 << PB3 | 1 << PB4);
-        // Dann Rechtslauf aktivieren
-        port_c |= 1 << PB3;
-    }
-    else if (s2)
-    {
-        // Erst beide richtung ausschalten
-        port_c &= ~(1 << PB3 | 1 << PB4);
-        // Dann Rechtslauf aktivieren
-        port_c |= 1 << PB4;
+    if (q1_rechts) {
+      usart_puts("Motor dreht rechtsrum\r\n");
+    } else if (q2_links) {
+      usart_puts("Motor dreht linksrum\r\n");
     }
 
-    PORTB = port_b;
-    PORTC = port_c;
-    PORTD = port_d;
+    // Alle Relais Pins (PC3 und PC4) werden geleert und dann gesetzt
+    PORTC = PORTC & ~(1 << PIN_Q1_RECHTS | 1 << PIN_Q2_LINKS) |
+            q1_rechts << PIN_Q1_RECHTS | q2_links << PIN_Q2_LINKS;
+  }
+}
+
+#elif EXERCISE == 10
+
+#define INFO "ET_50_KL_3\r\n"
+#define BAUD 19200UL
+
+#include "uartAT328p.h"
+#include <stdbool.h>
+
+// Relais Zustand
+bool q1_rechts = 0;
+bool q2_links = 0;
+
+int main(void) {
+  // GPIO Ausgänge setzen
+  DDRB = 0x3F;
+  DDRC = 0x18;
+  DDRD = 0xFC;
+
+  // UART initialisieren
+  usart_init();
+
+  // Version über UART senden
+  usart_puts(INFO);
+
+  while (1) {
+    // Port Eingänge in Variablen speichern
+    // Taster S0 bis S2 (1=gedrückt)
+    const bool s0_aus = !((PINC >> PIN_S0_AUS) & 0x01);
+    const bool s1_rechts = !((PINC >> PIN_S1_RECHTS) & 0x01);
+    const bool s2_links = !((PINC >> PIN_S2_LINKS) & 0x01);
+
+    /*
+     * Motorsteuern über UART 
+     * '0': ausschalten
+     * 'r': Rechtslauf
+     * 'l': Linkslauf
+     */
+    char uart_command = 0;
+
+    // Liegt eine Eingabe am UART vor?
+    if (kbhit()) {
+      uart_command = usart_getc_free();
+    }
+
+    if (uart_command == '0' || s0_aus) {
+      // Aus
+      q1_rechts = 0;
+      q2_links = 0;
+    } else if (uart_command == 'r' || s1_rechts) {
+      // Rechtsrum
+      q1_rechts = 1;
+      q2_links = 0;
+    } else if (uart_command == 'l' || s2_links) {
+      // Linksrum
+      q1_rechts = 0;
+      q2_links = 1;
+    }
+
+    // Taster Zustände senden
+    usart_puts("S0=");
+    usart_itoa(s0_aus);
+    usart_puts("; S1=");
+    usart_itoa(s1_rechts);
+    usart_puts("; S2=");
+    usart_itoa(s2_links);
+    usart_puts("\r\n");
+
+    if (q1_rechts) {
+      usart_puts("Motor dreht rechtsrum\r\n");
+    } else if (q2_links) {
+      usart_puts("Motor dreht linksrum\r\n");
+    }
+
+    // Alle Relais Pins (PC3 und PC4) werden geleert und dann gesetzt
+    PORTC = PORTC & ~(1 << PIN_Q1_RECHTS | 1 << PIN_Q2_LINKS) |
+            q1_rechts << PIN_Q1_RECHTS | q2_links << PIN_Q2_LINKS;
+  }
+}
+
+#elif EXERCISE == 11
+
+#define INFO "ET_50_KL_4\r\n"
+#define BAUD 19200UL
+
+#include "uartAT328p.h"
+#include <stdbool.h>
+
+// Relais Zustand
+bool q1_rechts = 0;
+bool q2_links = 0;
+
+int main(void) {
+  // GPIO Ausgänge setzen
+  DDRB = 0x3F;
+  DDRC = 0x18;
+  DDRD = 0xFC;
+
+  // UART initialisieren
+  usart_init();
+
+  // Version über UART senden
+  usart_puts(INFO);
+
+  while (1) {
+    // Port Eingänge in Variablen speichern
+    // Taster S0 bis S2 (1=gedrückt)
+    const bool s0_aus = !((PINC >> PIN_S0_AUS) & 0x01);
+    const bool s1_rechts = !((PINC >> PIN_S1_RECHTS) & 0x01);
+    const bool s2_links = !((PINC >> PIN_S2_LINKS) & 0x01);
+
+    /*
+     * Motorsteuern über UART 
+     * '0': ausschalten
+     * 'r': Rechtslauf
+     * 'l': Linkslauf
+     */
+    char uart_command = 0;
+
+    // Liegt eine Eingabe am UART vor?
+    if (kbhit()) {
+      uart_command = usart_getc_free();
+      usart_puts("UART Befehl erhalten: ");
+      usart_putc(uart_command);
+      usart_puts("\r\n");
+    }
+
+    if (uart_command == '0' || s0_aus) {
+      // Aus
+      q1_rechts = 0;
+      q2_links = 0;
+    } else if (uart_command == 'r' || s1_rechts) {
+      // Rechtsrum
+      q1_rechts = 1;
+      q2_links = 0;
+    } else if (uart_command == 'l' || s2_links) {
+      // Linksrum
+      q1_rechts = 0;
+      q2_links = 1;
+    }
+
+    if (uart_command == 'i') {
+      // Taster Zustände senden
+      usart_puts("S0=");
+      usart_itoa(s0_aus);
+      usart_puts("; S1=");
+      usart_itoa(s1_rechts);
+      usart_puts("; S2=");
+      usart_itoa(s2_links);
+      usart_puts("\r\n");
+
+      usart_puts("Motorzustand: ");
+
+      if (q1_rechts) {
+        usart_putc('R');
+      } else if (q2_links) {
+        usart_putc('L');
+      } else {
+        usart_putc('0');
+      }
+
+      usart_puts("\r\n");
+    }
+
+    // Alle Relais Pins (PC3 und PC4) werden geleert und dann gesetzt
+    PORTC = PORTC & ~(1 << PIN_Q1_RECHTS | 1 << PIN_Q2_LINKS) |
+            q1_rechts << PIN_Q1_RECHTS | q2_links << PIN_Q2_LINKS;
+  }
+}
+
+#elif EXERCISE == 12
+
+#define INFO "ET_50_KL_5\r\n"
+#define BAUD 19200UL
+
+#include "uartAT328p.h"
+#include <stdbool.h>
+
+// Relais Zustand
+bool q1_rechts = 0;
+bool q2_links = 0;
+
+void initLCD() {
+    // Informationen bezüglich des HD44780 wurden dem Datenblatt entnommen:
+    // https://cdn.sparkfun.com/assets/9/5/f/7/b/HD44780.pdf
+}
+
+int main(void) {
+  // GPIO Ausgänge setzen
+  DDRB = 0x3F;
+  DDRC = 0x18;
+  DDRD = 0xFC;
+
+  // UART initialisieren
+  usart_init();
+
+  // Version über UART senden
+  usart_puts(INFO);
+
+  while (1) {
+    // Port Eingänge in Variablen speichern
+    // Taster S0 bis S2 (1=gedrückt)
+    const bool s0_aus = !((PINC >> PIN_S0_AUS) & 0x01);
+    const bool s1_rechts = !((PINC >> PIN_S1_RECHTS) & 0x01);
+    const bool s2_links = !((PINC >> PIN_S2_LINKS) & 0x01);
+
+    /*
+     * Motorsteuern über UART 
+     * '0': ausschalten
+     * 'r': Rechtslauf
+     * 'l': Linkslauf
+     */
+    char uart_command = 0;
+
+    // Liegt eine Eingabe am UART vor?
+    if (kbhit()) {
+      uart_command = usart_getc_free();
+      usart_puts("UART Befehl erhalten: ");
+      usart_putc(uart_command);
+      usart_puts("\r\n");
+    }
+
+    if (uart_command == '0' || s0_aus) {
+      // Aus
+      q1_rechts = 0;
+      q2_links = 0;
+    } else if (uart_command == 'r' || s1_rechts) {
+      // Rechtsrum
+      q1_rechts = 1;
+      q2_links = 0;
+    } else if (uart_command == 'l' || s2_links) {
+      // Linksrum
+      q1_rechts = 0;
+      q2_links = 1;
+    }
+
+    if (uart_command == 'i') {
+      // Taster Zustände senden
+      usart_puts("S0=");
+      usart_itoa(s0_aus);
+      usart_puts("; S1=");
+      usart_itoa(s1_rechts);
+      usart_puts("; S2=");
+      usart_itoa(s2_links);
+      usart_puts("\r\n");
+
+      usart_puts("Motorzustand: ");
+
+      if (q1_rechts) {
+        usart_putc('R');
+      } else if (q2_links) {
+        usart_putc('L');
+      } else {
+        usart_putc('0');
+      }
+
+      usart_puts("\r\n");
+    }
+
+    // Alle Relais Pins (PC3 und PC4) werden geleert und dann gesetzt
+    PORTC = PORTC & ~(1 << PIN_Q1_RECHTS | 1 << PIN_Q2_LINKS) |
+            q1_rechts << PIN_Q1_RECHTS | q2_links << PIN_Q2_LINKS;
   }
 }
 
