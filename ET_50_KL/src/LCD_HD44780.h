@@ -123,16 +123,16 @@ void lcd_clear() {  // Displayinhalt loeschen => lcdclear
   lcd_befehl(0x01); // 0b00000001   => LCD-Clear
 }
 
-void lcd_init() {                  // LCD 8bit Initialisierung
-  _delay_ms(init_ms1);             // Wartezeit bis das LCD betriebsbereit ist
-  lcd_befehl(0x38);                // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
-  lcd_befehl(0x38);                // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
-  lcd_befehl(0x38);                // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
-  lcd_befehl(LCD_Cursor_ON_Blink); // 0b00001111	// Display an, Cursor
-                                   // an, Cursor blink
-  lcd_clear();                     // Displayinhalt loeschen => lcdclear
-  lcd_befehl(0x06);                // 0b00000110	Cursor increment => cursor wird
-                                   // automatisch nach rechts geschoben
+void lcd_init() {      // LCD 8bit Initialisierung
+  _delay_ms(init_ms1); // Wartezeit bis das LCD betriebsbereit ist
+  lcd_befehl(0x38);    // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
+  lcd_befehl(0x38);    // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
+  lcd_befehl(0x38);    // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
+  // lcd_befehl(LCD_Cursor_ON_Blink); // 0b00001111	// Display an, Cursor
+  //  an, Cursor blink
+  lcd_clear();      // Displayinhalt loeschen => lcdclear
+  lcd_befehl(0x06); // 0b00000110	Cursor increment => cursor wird
+                    // automatisch nach rechts geschoben
 }
 
 void lcd_puts(char text[]) // char Array mit unbestimmter Groesse => es ist
