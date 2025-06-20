@@ -10,6 +10,7 @@
 \usepackage{amsmath}
 \usepackage{siunitx}
 \usepackage{pdfpages}
+\usepackage{minted}
 
 % Default figure folder
 \graphicspath{{res}}
@@ -25,10 +26,13 @@
 
 \section{Kannlisten Aufgaben}
 
+Im Folgenden werden die Lösungen zu den Aufgaben aus der Kannliste dargestellt (siehe Anhang, S.~\pageref{sec:Anhang}).
+
 \subsection{Aufgaben 0 bis 5}
+
 \begin{figure}[H]
     \centering
-    \includegraphics[angle=270, width=0.9\linewidth]{A0_to_A2.jpg}
+    \includegraphics[angle=270, width=0.85\linewidth]{A0_to_A2.jpg}
     \caption{Aufgaben 0 bis 2}
 \end{figure}
 
@@ -79,7 +83,79 @@ Die folgenden Pinbeschreibungen wurden aus dem Datenblatt des HD44780 entnommen.
 \clearpage
 \subsection{Aufgabe 7}
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{A7.jpg}
+    \caption{Schaltplan um LCD (mit HD44780) an Arduino anzuschließen}
+\end{figure}
+
 \clearpage
+\subsection{Allgemeiner Code}
+Code der für alle Aufgaben von 8 bis 14 gilt:
+
+\inputminted[linenos]{c++}{res/code/global.c}
+
+\clearpage
+\subsection{Aufgabe 8}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{ET_50_KL_01.png}
+    \caption{UART-Ausgabe von ET\_50\_KL\_01}
+\end{figure}
+\inputminted[linenos]{c++}{res/code/ET_50_KL_01.c}
+
+\clearpage
+\subsection{Aufgabe 9}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{ET_50_KL_02.png}
+    \caption{UART-Ausgabe von ET\_50\_KL\_02}
+\end{figure}
+\inputminted[linenos]{c++}{res/code/ET_50_KL_02.c}
+
+\clearpage
+\subsection{Aufgabe 10}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{ET_50_KL_03.png}
+    \caption{UART-Ausgabe von ET\_50\_KL\_03}
+\end{figure}
+\inputminted[linenos]{c++}{res/code/ET_50_KL_03.c}
+
+\clearpage
+\subsection{Aufgabe 11}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{ET_50_KL_04.png}
+    \caption{UART-Ausgabe von ET\_50\_KL\_04}
+\end{figure}
+\inputminted[linenos]{c++}{res/code/ET_50_KL_04.c}
+
+\clearpage
+\subsection{Aufgabe 12}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{ET_50_KL_05.jpg}
+    \caption{Initialisiertes LCD von ET\_50\_KL\_05}
+\end{figure}
+\inputminted[linenos]{c++}{res/code/ET_50_KL_05.c}
+
+\clearpage
+\subsection{Aufgabe 13}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{ET_50_KL_06.jpg}
+    \caption{Version und Motorzustand auf LCD von ET\_50\_KL\_06}
+\end{figure}
+\inputminted[linenos]{c++}{res/code/ET_50_KL_06.c}
+
+\clearpage
+\subsection{Aufgabe 14}
+\inputminted[linenos]{c++}{res/code/global.c}
+\inputminted[linenos]{c++}{res/code/ET_50_KL_07.c}
+
+\clearpage
+\label{sec:Anhang}
 \includepdf[pages=-]{res/Kannliste.pdf}
 
 \end{document}

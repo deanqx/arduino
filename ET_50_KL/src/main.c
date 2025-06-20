@@ -26,7 +26,6 @@
  * A5        PC5
  * */
 
-#include <stdint.h>
 #define PIN_S0_AUS PC0
 #define PIN_S1_RECHTS PC1
 #define PIN_S2_LINKS PC2
