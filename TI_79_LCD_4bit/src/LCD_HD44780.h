@@ -47,90 +47,59 @@
 #include <stdint.h>
 #include <util/delay.h>
 
-void portAnpassung(uint8_t daten) { // Daten auf die PortPins schrieben
-  // DB7	DB6	DB5	DB4	DB3	DB2	DB1	DB0
-  // PD3	PD4	PD5	PD6	PD7	PB0	PB1	PB2
-  if (daten & (1 << bit0)) {
-    lcd_ |= (1 << lcd_DB0);
-  } else {
-    PORTB &= ~(1 << lcd_DB0);
-  }
-
-  if (daten & (1 << bit1)) {
-    PORTB |= (1 << lcd_DB1);
-  } else {
-    PORTB &= ~(1 << lcd_DB1);
-  }
-
-  if (daten & (1 << bit2)) {
-    PORTB |= (1 << lcd_DB2);
-  } else {
-    PORTB &= ~(1 << lcd_DB2);
-  }
-
-  if (daten & (1 << bit3)) {
-    PORTD |= (1 << lcd_DB3);
-  } else {
-    PORTD &= ~(1 << lcd_DB3);
-  }
-
-  if (daten & (1 << bit4)) {
-    PORTD |= (1 << lcd_DB4);
-  } else {
-    PORTD &= ~(1 << lcd_DB4);
-  }
-
-  if (daten & (1 << bit5)) {
-    PORTD |= (1 << lcd_DB5);
-  } else {
-    PORTD &= ~(1 << lcd_DB5);
-  }
-
-  if (daten & (1 << bit6)) {
-    PORTD |= (1 << lcd_DB6);
-  } else {
-    PORTD &= ~(1 << lcd_DB6);
-  }
-
-  if (daten & (1 << bit7)) {
-    PORTD |= (1 << lcd_DB7);
-  } else {
-    PORTD &= ~(1 << lcd_DB7);
-  }
+void lcd_set_data(uint8_t data) { // Daten auf die PortPins schrieben
+  // Alle betroffenen Pins zurücksetzen und dann setzen
+  LCD_PORT_DB0 = LCD_PORT_DB0 & ~(1 << LCD_DB0) | ((data >> 0) & 1) << LCD_DB0;
+  LCD_PORT_DB1 = LCD_PORT_DB1 & ~(1 << LCD_DB1) | ((data >> 1) & 1) << LCD_DB1;
+  LCD_PORT_DB2 = LCD_PORT_DB2 & ~(1 << LCD_DB2) | ((data >> 2) & 1) << LCD_DB2;
+  LCD_PORT_DB3 = LCD_PORT_DB3 & ~(1 << LCD_DB3) | ((data >> 3) & 1) << LCD_DB3;
+  LCD_PORT_DB4 = LCD_PORT_DB4 & ~(1 << LCD_DB4) | ((data >> 4) & 1) << LCD_DB4;
+  LCD_PORT_DB5 = LCD_PORT_DB5 & ~(1 << LCD_DB5) | ((data >> 5) & 1) << LCD_DB5;
+  LCD_PORT_DB6 = LCD_PORT_DB6 & ~(1 << LCD_DB6) | ((data >> 6) & 1) << LCD_DB6;
+  LCD_PORT_DB7 = LCD_PORT_DB7 & ~(1 << LCD_DB7) | ((data >> 7) & 1) << LCD_DB7;
 }
 
 void lcd_enable(void) {
   // Daten/Befehl uebernehmen mit Enable
-  PORTB |= (1 << lcd_Enable);
-  _delay_ms(1); // Setze PB3 auf High und lass alle anderen Pins wie zuvor
-  PORTB &= ~(1 << lcd_Enable);
-  _delay_ms(1); // Setze PB3 auf High und lass alle anderen Pins wie zuvor
+  LCD_PORT_Enable |= (1 << LCD_Enable);
+  _delay_ms(10); // Setze PB3 auf High und lass alle anderen Pins wie zuvor
+  LCD_PORT_Enable &= ~(1 << LCD_Enable);
+  _delay_ms(10); // Setze PB3 auf High und lass alle anderen Pins wie zuvor
 }
 
 void lcd_putc(uint8_t daten) {
-  portAnpassung(daten);   // Daten auf den LCD-PORT legen
-  PORTB |= (1 << lcd_RS); // Daten dafuer muss das RS-Bit auf High liegen
-  _delay_ms(init_ms2);
+  LCD_PORT_RS |= (1 << LCD_RS); // Daten dafuer muss das RS-Bit auf High liegen
+
+  lcd_set_data(daten & 0xF0); // Daten auf den LCD-PORT legen
+  _delay_ms(10);
+  lcd_enable();
+
+  _delay_ms(10);
+
+  lcd_set_data(daten << 4);
+  _delay_ms(10);
   lcd_enable();
 }
 
 void lcd_befehl(uint8_t befehl) {
 #if PINOUT == 8
-  portAnpassung(befehl);   // 0b00000001   => LCD-Clear
-  PORTB &= ~(1 << lcd_RS); // Befehl
-  _delay_ms(init_ms2);
+  portAnpassung(befehl);         // 0b00000001   => LCD-Clear
+  LCD_PORT_RS &= ~(1 << LCD_RS); // Befehl
+  _delay_ms(1);
   lcd_enable();
 #elif PINOUT == 4
+  LCD_PORT_RS &= ~(1 << LCD_RS); // Befehl
+
   // Higher nibble
-  portAnpassung(befehl & 0xF0); // 0b00000001   => LCD-Clear
-  PORTB &= ~(1 << lcd_RS);      // Befehl
-  _delay_ms(init_ms2);
+  lcd_set_data(befehl & 0xF0); // 0b00000001   => LCD-Clear
+  _delay_ms(10);
   lcd_enable();
 
+  _delay_ms(10);
+
   // Lower nibble
-  portAnpassung(befehl << 4); // 0b00000001   => LCD-Clear
-  PORTB &= ~(1 << lcd_RS);    // Befehl
-  _delay_ms(init_ms2);
+  lcd_set_data(befehl << 4); // 0b00000001   => LCD-Clear
+  _delay_ms(10);
   lcd_enable();
 #endif
 }
@@ -139,8 +108,8 @@ void lcd_clear() {  // Displayinhalt loeschen => lcdclear
   lcd_befehl(0x01); // 0b00000001   => LCD-Clear
 }
 
-void lcd_init() {      // LCD 8bit Initialisierung
-  _delay_ms(40); // Wartezeit bis das LCD betriebsbereit ist
+void lcd_init() { // LCD 8bit Initialisierung
+  _delay_ms(40);  // Wartezeit bis das LCD betriebsbereit ist
 #if PINOUT == 8
   lcd_befehl(0x38); // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
   _delay_ms(5);
