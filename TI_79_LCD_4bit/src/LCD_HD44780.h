@@ -4,29 +4,29 @@
 
 #define PINOUT 4 // 4 or 8 bit mode
 
-#define lcd_DB0 PB2
-#define lcd_DB1 PB1
-#define lcd_DB2 PB0
-#define lcd_DB3 PD7
-#define lcd_DB4 PD6
-#define lcd_DB5 PD5
-#define lcd_DB6 PD4
-#define lcd_DB7 PD3
-#define lcd_RS PB5
-#define lcd_Enable PB3
-#define lcd_rw PB4
+#define LCD_DB0 PB2
+#define LCD_DB1 PB1
+#define LCD_DB2 PB0
+#define LCD_DB3 PD7
+#define LCD_DB4 PD6
+#define LCD_DB5 PD5
+#define LCD_DB6 PD4
+#define LCD_DB7 PD3
+#define LCD_RS PB5
+#define LCD_Enable PB3
+#define LCD_rw PB4
 
-#define init_ms1 30
-#define init_ms2 10
-
-#define bit0 0
-#define bit1 1
-#define bit2 2
-#define bit3 3
-#define bit4 4
-#define bit5 5
-#define bit6 6
-#define bit7 7
+#define LCD_PORT_DB0 PORTB
+#define LCD_PORT_DB1 PORTB
+#define LCD_PORT_DB2 PORTB
+#define LCD_PORT_DB3 PORTD
+#define LCD_PORT_DB4 PORTD
+#define LCD_PORT_DB5 PORTD
+#define LCD_PORT_DB6 PORTD
+#define LCD_PORT_DB7 PORTD
+#define LCD_PORT_RS PORTB
+#define LCD_PORT_Enable PORTB
+#define LCD_PORT_rw PORTB
 
 // Set DD RAM Address --------- 0b1xxxxxxx  (Display Data RAM)
 #define LCD_SET_DDADR 0x80
@@ -51,7 +51,7 @@ void portAnpassung(uint8_t daten) { // Daten auf die PortPins schrieben
   // DB7	DB6	DB5	DB4	DB3	DB2	DB1	DB0
   // PD3	PD4	PD5	PD6	PD7	PB0	PB1	PB2
   if (daten & (1 << bit0)) {
-    PORTB |= (1 << lcd_DB0);
+    lcd_ |= (1 << lcd_DB0);
   } else {
     PORTB &= ~(1 << lcd_DB0);
   }
