@@ -22,8 +22,9 @@ int main(void) {
 
   usart_init(); // UART-Schnittstelle aktivieren PD0 = RX und PD1 = TX
 
-  lcd_init();
   _delay_ms(1000);
+  lcd_init();
+  lcd_home();
   lcd_putc('0');
   // lcd_puts("test");
 

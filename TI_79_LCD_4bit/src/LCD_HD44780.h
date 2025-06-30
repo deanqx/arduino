@@ -71,13 +71,13 @@ void lcd_putc(uint8_t daten) {
   LCD_PORT_RS |= (1 << LCD_RS); // Daten dafuer muss das RS-Bit auf High liegen
 
   lcd_set_data(daten & 0xF0); // Daten auf den LCD-PORT legen
-  _delay_ms(10);
+  _delay_ms(1);
   lcd_enable();
 
-  _delay_ms(10);
+  _delay_ms(1);
 
   lcd_set_data(daten << 4);
-  _delay_ms(10);
+  _delay_ms(1);
   lcd_enable();
 }
 
@@ -92,14 +92,14 @@ void lcd_befehl(uint8_t befehl) {
 
   // Higher nibble
   lcd_set_data(befehl & 0xF0); // 0b00000001   => LCD-Clear
-  _delay_ms(10);
+  _delay_ms(1);
   lcd_enable();
 
-  _delay_ms(10);
+  _delay_ms(1);
 
   // Lower nibble
   lcd_set_data(befehl << 4); // 0b00000001   => LCD-Clear
-  _delay_ms(10);
+  _delay_ms(1);
   lcd_enable();
 #endif
 }
@@ -110,6 +110,7 @@ void lcd_clear() {  // Displayinhalt loeschen => lcdclear
 
 void lcd_init() { // LCD 8bit Initialisierung
   _delay_ms(40);  // Wartezeit bis das LCD betriebsbereit ist
+
 #if PINOUT == 8
   lcd_befehl(0x38); // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
   _delay_ms(5);
@@ -122,7 +123,9 @@ void lcd_init() { // LCD 8bit Initialisierung
   lcd_befehl(0x28); // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
   _delay_ms(1);
   lcd_befehl(0x28); // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
+  lcd_befehl(0x28); // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
 #endif
+
   lcd_befehl(LCD_Cursor_ON_Blink); // 0b00001111	// Display an, Cursor
                                    // an, Cursor blink
   lcd_clear();                     // Displayinhalt loeschen => lcdclear
