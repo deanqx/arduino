@@ -33,7 +33,6 @@ asm: build
 	avr-gcc -S -Os -DF_CPU=16000000UL -mmcu=atmega328p -o $(BUILD_DIR)/compiled.asm $(SRC_DIR)/main.c
 
 clean:
-	rm -f compile_commands.json
 	rm -fr $(BUILD_DIR)
 
 .PHONY: all deps upload size clean

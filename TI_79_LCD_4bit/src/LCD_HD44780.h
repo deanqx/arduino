@@ -2,7 +2,7 @@
         Textdisplay HD44780 von Hitachi
 */
 
-#define PINOUT 8 // 4 or 8 bit mode
+#define PINOUT 4 // 4 or 8 bit mode
 #define CLOCK_DELAY 10
 
 #define LCD_DB0 PB2
@@ -116,6 +116,10 @@ void lcd_clear() {  // Displayinhalt loeschen => lcdclear
 }
 
 void lcd_init() { // LCD 8bit Initialisierung
+  LCD_PORT_Enable &= ~(1 << LCD_Enable);
+  LCD_PORT_RS &= ~(1 << LCD_RS);
+  LCD_PORT_RS |= 1 << LCD_RS;
+
   _delay_ms(100); // Wartezeit bis das LCD betriebsbereit ist
 
 #if PINOUT == 8
@@ -133,11 +137,12 @@ void lcd_init() { // LCD 8bit Initialisierung
   lcd_befehl(0x28);
 #endif
 
-  lcd_befehl(LCD_Cursor_ON_Blink); // 0b00001111	// Display an, Cursor
-                                   // an, Cursor blink
+  lcd_befehl(0x08);                // Display off
   lcd_clear();                     // Displayinhalt loeschen => lcdclear
   lcd_befehl(0x06);                // 0b00000110	Cursor increment => cursor wird
                                    // automatisch nach rechts geschoben
+  lcd_befehl(LCD_Cursor_ON_Blink); // 0b00001111	// Display an, Cursor
+                                   // an, Cursor blink
 }
 
 void lcd_puts(char text[]) // char Array mit unbestimmter Groesse => es ist
