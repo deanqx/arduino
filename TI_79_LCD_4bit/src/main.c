@@ -20,15 +20,30 @@ int main(void) {
   DDRB = 0x3F;
   DDRD = 0xF8;
 
-  usart_init(); // UART-Schnittstelle aktivieren PD0 = RX und PD1 = TX
+  while (0) {
+    LCD_PORT_Enable |= 1 << LCD_Enable;
+    _delay_ms(1000);
 
+    LCD_PORT_Enable &= ~(1 << LCD_Enable);
+    _delay_ms(1000);
+  }
+
+  LCD_PORT_Enable &= ~(1 << LCD_Enable);
   _delay_ms(1000);
+
+  LCD_PORT_Enable |= 1 << LCD_Enable;
+  _delay_ms(1000);
+
+  LCD_PORT_Enable &= ~(1 << LCD_Enable);
+  _delay_ms(1000);
+
+  usart_init(); // UART-Schnittstelle aktivieren PD0 = RX und PD1 = TX
+  usart_puts(INFO);
+
   lcd_init();
-  lcd_home();
+  _delay_ms(1000);
   lcd_putc('0');
   // lcd_puts("test");
-
-  usart_puts(INFO);
 
   while (1) {
   }

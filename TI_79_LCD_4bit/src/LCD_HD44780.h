@@ -2,7 +2,8 @@
         Textdisplay HD44780 von Hitachi
 */
 
-#define PINOUT 4 // 4 or 8 bit mode
+#define PINOUT 8 // 4 or 8 bit mode
+#define CLOCK_DELAY 10
 
 #define LCD_DB0 PB2
 #define LCD_DB1 PB1
@@ -62,44 +63,50 @@ void lcd_set_data(uint8_t data) { // Daten auf die PortPins schrieben
 void lcd_enable(void) {
   // Daten/Befehl uebernehmen mit Enable
   LCD_PORT_Enable |= (1 << LCD_Enable);
-  _delay_ms(10); // Setze PB3 auf High und lass alle anderen Pins wie zuvor
+  _delay_ms(CLOCK_DELAY);
   LCD_PORT_Enable &= ~(1 << LCD_Enable);
-  _delay_ms(10); // Setze PB3 auf High und lass alle anderen Pins wie zuvor
+  _delay_ms(CLOCK_DELAY);
 }
 
 void lcd_putc(uint8_t daten) {
   LCD_PORT_RS |= (1 << LCD_RS); // Daten dafuer muss das RS-Bit auf High liegen
 
+#if PINOUT == 8
+  lcd_set_data(daten); // Daten auf den LCD-PORT legen
+  _delay_ms(CLOCK_DELAY);
+  lcd_enable();
+#elif PINOUT == 4
   lcd_set_data(daten & 0xF0); // Daten auf den LCD-PORT legen
-  _delay_ms(1);
+  _delay_ms(CLOCK_DELAY);
   lcd_enable();
 
-  _delay_ms(1);
+  _delay_ms(CLOCK_DELAY);
 
   lcd_set_data(daten << 4);
-  _delay_ms(1);
+  _delay_ms(CLOCK_DELAY);
   lcd_enable();
+#endif
 }
 
 void lcd_befehl(uint8_t befehl) {
 #if PINOUT == 8
-  portAnpassung(befehl);         // 0b00000001   => LCD-Clear
+  lcd_set_data(befehl);          // 0b00000001   => LCD-Clear
   LCD_PORT_RS &= ~(1 << LCD_RS); // Befehl
-  _delay_ms(1);
+  _delay_ms(CLOCK_DELAY);
   lcd_enable();
 #elif PINOUT == 4
   LCD_PORT_RS &= ~(1 << LCD_RS); // Befehl
 
   // Higher nibble
   lcd_set_data(befehl & 0xF0); // 0b00000001   => LCD-Clear
-  _delay_ms(1);
+  _delay_ms(CLOCK_DELAY);
   lcd_enable();
 
-  _delay_ms(1);
+  _delay_ms(CLOCK_DELAY);
 
   // Lower nibble
   lcd_set_data(befehl << 4); // 0b00000001   => LCD-Clear
-  _delay_ms(1);
+  _delay_ms(CLOCK_DELAY);
   lcd_enable();
 #endif
 }
@@ -109,7 +116,7 @@ void lcd_clear() {  // Displayinhalt loeschen => lcdclear
 }
 
 void lcd_init() { // LCD 8bit Initialisierung
-  _delay_ms(40);  // Wartezeit bis das LCD betriebsbereit ist
+  _delay_ms(100); // Wartezeit bis das LCD betriebsbereit ist
 
 #if PINOUT == 8
   lcd_befehl(0x38); // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
@@ -118,12 +125,12 @@ void lcd_init() { // LCD 8bit Initialisierung
   _delay_ms(1);
   lcd_befehl(0x38); // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
 #elif PINOUT == 4
-  lcd_befehl(0x28); // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
-  _delay_ms(5);
-  lcd_befehl(0x28); // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
+  // 0x28 = 0b00101000;	4-Bitmodus 2-zeilig 5x7 font
+  lcd_befehl(0x28);
+  _delay_ms(10);
+  lcd_befehl(0x28);
   _delay_ms(1);
-  lcd_befehl(0x28); // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
-  lcd_befehl(0x28); // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
+  lcd_befehl(0x28);
 #endif
 
   lcd_befehl(LCD_Cursor_ON_Blink); // 0b00001111	// Display an, Cursor
