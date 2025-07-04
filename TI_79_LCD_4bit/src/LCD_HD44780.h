@@ -2,8 +2,8 @@
         Textdisplay HD44780 von Hitachi
 */
 
-#define PINOUT 4 // 4 or 8 bit mode
-#define CLOCK_DELAY 10
+#define PINOUT 8 // 4 or 8 bit mode
+#define CLOCK_DELAY_US 400
 
 #define LCD_DB0 PB2
 #define LCD_DB1 PB1
@@ -63,9 +63,9 @@ void lcd_set_data(uint8_t data) { // Daten auf die PortPins schrieben
 void lcd_enable(void) {
   // Daten/Befehl uebernehmen mit Enable
   LCD_PORT_Enable |= (1 << LCD_Enable);
-  _delay_ms(CLOCK_DELAY);
+  _delay_us(CLOCK_DELAY_US);
   LCD_PORT_Enable &= ~(1 << LCD_Enable);
-  _delay_ms(CLOCK_DELAY);
+  _delay_us(CLOCK_DELAY_US);
 }
 
 void lcd_putc(uint8_t daten) {
@@ -73,17 +73,17 @@ void lcd_putc(uint8_t daten) {
 
 #if PINOUT == 8
   lcd_set_data(daten); // Daten auf den LCD-PORT legen
-  _delay_ms(CLOCK_DELAY);
+  _delay_us(CLOCK_DELAY_US);
   lcd_enable();
 #elif PINOUT == 4
   lcd_set_data(daten & 0xF0); // Daten auf den LCD-PORT legen
-  _delay_ms(CLOCK_DELAY);
+  _delay_us(CLOCK_DELAY_US);
   lcd_enable();
 
-  _delay_ms(CLOCK_DELAY);
+  _delay_us(CLOCK_DELAY_US);
 
   lcd_set_data(daten << 4);
-  _delay_ms(CLOCK_DELAY);
+  _delay_us(CLOCK_DELAY_US);
   lcd_enable();
 #endif
 }
@@ -92,21 +92,21 @@ void lcd_befehl(uint8_t befehl) {
 #if PINOUT == 8
   lcd_set_data(befehl);          // 0b00000001   => LCD-Clear
   LCD_PORT_RS &= ~(1 << LCD_RS); // Befehl
-  _delay_ms(CLOCK_DELAY);
+  _delay_us(CLOCK_DELAY_US);
   lcd_enable();
 #elif PINOUT == 4
   LCD_PORT_RS &= ~(1 << LCD_RS); // Befehl
 
   // Higher nibble
   lcd_set_data(befehl & 0xF0); // 0b00000001   => LCD-Clear
-  _delay_ms(CLOCK_DELAY);
+  _delay_us(CLOCK_DELAY_US);
   lcd_enable();
 
-  _delay_ms(CLOCK_DELAY);
+  _delay_us(CLOCK_DELAY_US);
 
   // Lower nibble
   lcd_set_data(befehl << 4); // 0b00000001   => LCD-Clear
-  _delay_ms(CLOCK_DELAY);
+  _delay_us(CLOCK_DELAY_US);
   lcd_enable();
 #endif
 }
@@ -116,10 +116,6 @@ void lcd_clear() {  // Displayinhalt loeschen => lcdclear
 }
 
 void lcd_init() { // LCD 8bit Initialisierung
-  LCD_PORT_Enable &= ~(1 << LCD_Enable);
-  LCD_PORT_RS &= ~(1 << LCD_RS);
-  LCD_PORT_RS |= 1 << LCD_RS;
-
   _delay_ms(100); // Wartezeit bis das LCD betriebsbereit ist
 
 #if PINOUT == 8
@@ -155,19 +151,20 @@ void lcd_puts(char text[]) // char Array mit unbestimmter Groesse => es ist
 
 void lcd_gotoxy(uint8_t x, uint8_t y) { // x = Spalte , y = Zeile
                                         // x=0 erste Stelle y=0 erste Zeile
-  uint8_t data = 0;
+  uint8_t data = LCD_SET_DDADR | x;
+
   switch (y) {
   case 0:
-    data = LCD_SET_DDADR + LCD_DDADR_LINE1 + x;
+    data |= LCD_DDADR_LINE1;
     break; // 1. Zeile
   case 1:
-    data = LCD_SET_DDADR + LCD_DDADR_LINE2 + x;
+    data |= LCD_DDADR_LINE2;
     break; // 2. Zeile
   case 2:
-    data = LCD_SET_DDADR + LCD_DDADR_LINE3 + x;
+    data |= LCD_DDADR_LINE3;
     break; // 3. Zeile
   case 3:
-    data = LCD_SET_DDADR + LCD_DDADR_LINE4 + x;
+    data |= LCD_DDADR_LINE4;
     break; // 4. Zeile
   }
   lcd_befehl(data);
