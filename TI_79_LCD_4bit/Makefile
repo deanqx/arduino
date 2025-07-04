@@ -14,7 +14,7 @@ all: build upload
 deps:
 	sudo pacman -S avr-libc avrdude avr-binutils avr-gcc
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c force_rebuild
 	@mkdir -p build
 	avr-gcc -O$(O) -D$(D) -mmcu=atmega328p -c $< -o $@
 
@@ -35,4 +35,4 @@ asm: build
 clean:
 	rm -fr $(BUILD_DIR)
 
-.PHONY: all deps upload size clean
+.PHONY: all force_rebuild clean deps upload size
