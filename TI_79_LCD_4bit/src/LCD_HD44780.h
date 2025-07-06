@@ -2,7 +2,7 @@
         Textdisplay HD44780 von Hitachi
 */
 
-#define PINOUT 8 // 4 or 8 bit mode
+#define PINOUT 4 // 4 or 8 bit mode
 #define CLOCK_DELAY_US 400
 
 #define LCD_DB0 PB2
@@ -70,43 +70,47 @@ void lcd_enable(void) {
 
 void lcd_putc(uint8_t daten) {
   LCD_PORT_RS |= (1 << LCD_RS); // Daten dafuer muss das RS-Bit auf High liegen
+  _delay_us(100); // min: 60ns (Page 49)
 
 #if PINOUT == 8
   lcd_set_data(daten); // Daten auf den LCD-PORT legen
-  _delay_us(CLOCK_DELAY_US);
   lcd_enable();
 #elif PINOUT == 4
   lcd_set_data(daten & 0xF0); // Daten auf den LCD-PORT legen
-  _delay_us(CLOCK_DELAY_US);
   lcd_enable();
 
-  _delay_us(CLOCK_DELAY_US);
-
   lcd_set_data(daten << 4);
-  _delay_us(CLOCK_DELAY_US);
   lcd_enable();
 #endif
 }
 
+// 0x2 = 0010 => D7 to D4
+void lcd_befehl_nibble(uint8_t nibble) {
+  LCD_PORT_RS &= ~(1 << LCD_RS);
+  _delay_us(100); // min: 60ns (Page 49)
+
+  lcd_set_data(nibble << 4);
+  lcd_enable();
+}
+
 void lcd_befehl(uint8_t befehl) {
 #if PINOUT == 8
-  lcd_set_data(befehl);          // 0b00000001   => LCD-Clear
   LCD_PORT_RS &= ~(1 << LCD_RS); // Befehl
+  _delay_us(100); // min: 60ns (Page 49)
+
+  lcd_set_data(befehl);          // 0b00000001   => LCD-Clear
   _delay_us(CLOCK_DELAY_US);
   lcd_enable();
 #elif PINOUT == 4
   LCD_PORT_RS &= ~(1 << LCD_RS); // Befehl
+  _delay_us(100); // min: 60ns (Page 49)
 
   // Higher nibble
   lcd_set_data(befehl & 0xF0); // 0b00000001   => LCD-Clear
-  _delay_us(CLOCK_DELAY_US);
   lcd_enable();
-
-  _delay_us(CLOCK_DELAY_US);
 
   // Lower nibble
   lcd_set_data(befehl << 4); // 0b00000001   => LCD-Clear
-  _delay_us(CLOCK_DELAY_US);
   lcd_enable();
 #endif
 }
@@ -116,25 +120,30 @@ void lcd_clear() {  // Displayinhalt loeschen => lcdclear
 }
 
 void lcd_init() { // LCD 8bit Initialisierung
-  _delay_ms(100); // Wartezeit bis das LCD betriebsbereit ist
+  // https://cdn.sparkfun.com/assets/9/5/f/7/b/HD44780.pdf#page=42
+  // Initializing by Instruction
+  _delay_ms(50);
+  lcd_befehl_nibble(0x3);
+  _delay_ms(10);
+  lcd_befehl_nibble(0x3);
+  _delay_ms(1);
+  lcd_befehl_nibble(0x3);
+  _delay_ms(1);
 
 #if PINOUT == 8
   lcd_befehl(0x38); // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
-  _delay_ms(5);
-  lcd_befehl(0x38); // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
-  _delay_ms(1);
-  lcd_befehl(0x38); // 0b00111000;	8-Bitmodus 2-zeilig 5x7 font
 #elif PINOUT == 4
+  // https://cdn.sparkfun.com/assets/9/5/f/7/b/HD44780.pdf#page=42
+  // Seite 42
+  lcd_befehl_nibble(0x2);
+
   // 0x28 = 0b00101000;	4-Bitmodus 2-zeilig 5x7 font
-  lcd_befehl(0x28);
-  _delay_ms(10);
-  lcd_befehl(0x28);
-  _delay_ms(1);
   lcd_befehl(0x28);
 #endif
 
   lcd_befehl(0x08);                // Display off
   lcd_clear();                     // Displayinhalt loeschen => lcdclear
+  _delay_ms(3);
   lcd_befehl(0x06);                // 0b00000110	Cursor increment => cursor wird
                                    // automatisch nach rechts geschoben
   lcd_befehl(LCD_Cursor_ON_Blink); // 0b00001111	// Display an, Cursor
