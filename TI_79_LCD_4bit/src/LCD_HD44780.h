@@ -70,7 +70,7 @@ void lcd_enable(void) {
 
 void lcd_putc(uint8_t daten) {
   LCD_PORT_RS |= (1 << LCD_RS); // Daten dafuer muss das RS-Bit auf High liegen
-  _delay_us(100); // min: 60ns (Page 49)
+  _delay_us(100);               // min: 60ns (Page 49)
 
 #if PINOUT == 8
   lcd_set_data(daten); // Daten auf den LCD-PORT legen
@@ -96,14 +96,14 @@ void lcd_befehl_nibble(uint8_t nibble) {
 void lcd_befehl(uint8_t befehl) {
 #if PINOUT == 8
   LCD_PORT_RS &= ~(1 << LCD_RS); // Befehl
-  _delay_us(100); // min: 60ns (Page 49)
+  _delay_us(100);                // min: 60ns (Page 49)
 
-  lcd_set_data(befehl);          // 0b00000001   => LCD-Clear
+  lcd_set_data(befehl); // 0b00000001   => LCD-Clear
   _delay_us(CLOCK_DELAY_US);
   lcd_enable();
 #elif PINOUT == 4
   LCD_PORT_RS &= ~(1 << LCD_RS); // Befehl
-  _delay_us(100); // min: 60ns (Page 49)
+  _delay_us(100);                // min: 60ns (Page 49)
 
   // Higher nibble
   lcd_set_data(befehl & 0xF0); // 0b00000001   => LCD-Clear
@@ -117,6 +117,7 @@ void lcd_befehl(uint8_t befehl) {
 
 void lcd_clear() {  // Displayinhalt loeschen => lcdclear
   lcd_befehl(0x01); // 0b00000001   => LCD-Clear
+  _delay_ms(3);
 }
 
 void lcd_init() { // LCD 8bit Initialisierung
@@ -143,7 +144,6 @@ void lcd_init() { // LCD 8bit Initialisierung
 
   lcd_befehl(0x08);                // Display off
   lcd_clear();                     // Displayinhalt loeschen => lcdclear
-  _delay_ms(3);
   lcd_befehl(0x06);                // 0b00000110	Cursor increment => cursor wird
                                    // automatisch nach rechts geschoben
   lcd_befehl(LCD_Cursor_ON_Blink); // 0b00001111	// Display an, Cursor
