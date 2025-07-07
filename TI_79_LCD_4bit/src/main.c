@@ -13,6 +13,7 @@
 #define P_SELECT PC2
 
 #include "LCD_HD44780.h"
+#include "i2c.h"
 #include "uartAT328p.h" // Einbinden der UART-Bibliothek,
 #include <avr/io.h>
 #include <util/delay.h>
@@ -54,6 +55,19 @@ void draw_menu() {
 }
 
 int main(void) {
+  DDRB = 1 << 5;
+
+  i2c_init();
+
+  if (i2c_addr(0x40))
+    PORTB |= 1 << 5;
+
+  if (i2c_tx_byte(0xAB))
+    PORTB |= 1 << 5;
+
+  i2c_deinit();
+  PORTB |= 1 << 5;
+
   // Pinbelegung für lcd
   DDRB = 0x3F;
   DDRD = 0xF8;
