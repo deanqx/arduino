@@ -1,12 +1,16 @@
 /*
  * I2C Bibliothek für ATmega328P ohne interne Funktionen
  *
+ * https://ww1.microchip.com/downloads/aemDocuments/documents/MCU08/ProductDocuments/DataSheets/ATmega48A-PA-88A-PA-168A-PA-328-P-DS-DS40002061B.pdf
+ * Seite 225
+ *
  * PCF8574 addresses:
  * 0100 A2 A1 A0 RW
  *
  * Output mode:
  *
- * <S> <slave address + write> <ACK> <data out> <ACK> <data out> <ACK> ... <data out> <ACK> <P>
+ * <S> <slave address + write> <ACK> <data out> <ACK>
+ * <data out> <ACK> ... <data out> <ACK> <P>
  * ACK is send by slave
  */
 
@@ -34,7 +38,7 @@
  * Initialize I2C Interface
  */
 void i2c_init(void) {
-  TWCR = _BV(TWEN);
+  TWCR = 1 << TWEN;
   TWBR = (F_CPU / I2C_F_SCL - 16) / 2;
 }
 
@@ -46,6 +50,7 @@ void i2c_init_with_pullups(void) {
   I2C_DDR_SDA &= ~(1 << I2C_SDA);
   I2C_PORT_SCL |= 1 << I2C_SCL;
   I2C_PORT_SDA |= 1 << I2C_SDA;
+
   i2c_init();
 }
 
@@ -104,8 +109,8 @@ int8_t i2c_addr(uint8_t addr) {
 /**
  * Send data byte to Slave Device
  */
-int8_t i2c_tx_byte(uint8_t byte) {
-  TWDR = byte;
+int8_t i2c_tx_byte(uint8_t data) {
+  TWDR = data;
   TWCR = _BV(TWEN) | _BV(TWINT);
   i2c_wait();
   return (TWSR & TW_STATUS_MASK) != TW_MT_DATA_ACK;
