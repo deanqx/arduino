@@ -62,7 +62,13 @@ int main(void) {
   if (i2c_addr(0x40))
     PORTB |= 1 << 5;
 
+  if (i2c_start())
+    PORTB |= 1 << 5;
+
   if (i2c_tx_byte(0xAB))
+    PORTB |= 1 << 5;
+
+  if (i2c_stop())
     PORTB |= 1 << 5;
 
   i2c_deinit();
