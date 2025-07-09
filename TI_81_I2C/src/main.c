@@ -1,4 +1,8 @@
-#include "i2c_soft.h"
+#define INTERNAL_LED PB5
+
+#include "i2c_soft_delay.h"
+// #include "i2c_soft.h"
+#include <avr/io.h>
 
 int main(void) {
   DDRB |= 1 << INTERNAL_LED;
