@@ -3,9 +3,9 @@
 #include <stdint.h>
 #include <util/delay.h>
 
-// #define I2C_F 100000
-#define I2C_F 100
-#define I2C_T_QUARTER_US (1000000.0 / (I2C_F * 4.0))
+// 10 kHz
+#define I2C_F 10000
+#define I2C_T_3_US (1000000.0 / (I2C_F * 3.0))
 
 // PB0 = D8
 // PB1 = D9
@@ -32,25 +32,30 @@ uint8_t i2c_tx_byte(uint8_t data) {
     // Clear SDA bit and then set
     I2C_PORT_SDA = I2C_PORT_SDA & ~(1 << I2C_SDA) | ((data >> i) & 1)
                                                         << I2C_SDA;
-    _delay_us(I2C_T_QUARTER_US);
+    _delay_us(I2C_T_3_US);
     I2C_PORT_SCL |= 1 << I2C_SCL;
-    _delay_us(I2C_T_QUARTER_US);
+    _delay_us(I2C_T_3_US);
     I2C_PORT_SCL &= ~(1 << I2C_SCL);
-    _delay_us(I2C_T_QUARTER_US);
+    _delay_us(I2C_T_3_US);
   }
 
   // Check acknowledge
+  _delay_us(I2C_T_3_US);
   I2C_DDR_SDA &= ~(1 << I2C_SDA);
 
-  _delay_us(I2C_T_QUARTER_US);
+  //_delay_us(I2C_T_3_US);
   I2C_PORT_SCL |= 1 << I2C_SCL;
-  _delay_us(I2C_T_QUARTER_US);
-  I2C_PORT_SCL &= ~(1 << I2C_SCL);
-  _delay_us(I2C_T_QUARTER_US);
+  _delay_us(I2C_T_3_US);
 
+  const bool err = (I2C_PIN_SDA >> I2C_SDA) & 1;
+
+  I2C_PORT_SCL &= ~(1 << I2C_SCL);
+  _delay_us(I2C_T_3_US);
+
+  I2C_PORT_SDA |= 1 << I2C_SDA;
   I2C_DDR_SDA |= 1 << I2C_SDA;
 
-  return I2C_PIN_SDA >> I2C_SDA & 1;
+  return err;
 }
 
 /*
@@ -60,15 +65,16 @@ uint8_t i2c_tx_byte(uint8_t data) {
  * @returns >0 when error ocurs
  * */
 uint8_t i2c_start(uint8_t addr, bool read) {
+  I2C_PORT_SCL |= 1 << I2C_SCL;
+  I2C_PORT_SDA |= 1 << I2C_SDA;
   I2C_DDR_SCL |= 1 << I2C_SCL;
   I2C_DDR_SDA |= 1 << I2C_SDA;
 
-  I2C_PORT_SCL |= 1 << I2C_SCL;
   I2C_PORT_SDA &= ~(1 << I2C_SDA);
-  _delay_us(I2C_T_QUARTER_US);
+  _delay_us(I2C_T_3_US);
 
   I2C_PORT_SCL &= ~(1 << I2C_SCL);
-  _delay_us(I2C_T_QUARTER_US);
+  _delay_us(I2C_T_3_US);
 
   return i2c_tx_byte(addr | read);
 }
@@ -77,18 +83,31 @@ uint8_t i2c_start(uint8_t addr, bool read) {
  * Send stop sequence
  * */
 void i2c_stop(void) {
+  I2C_PORT_SCL &= ~(1 << I2C_SCL);
+  I2C_PORT_SDA &= ~(1 << I2C_SDA);
+  _delay_us(I2C_T_3_US);
+
   I2C_PORT_SCL |= 1 << I2C_SCL;
-  _delay_us(I2C_T_QUARTER_US);
+  _delay_us(I2C_T_3_US);
+
   I2C_PORT_SDA |= 1 << I2C_SDA;
-  _delay_us(I2C_T_QUARTER_US);
+  _delay_us(I2C_T_3_US);
 }
 
 int main(void) {
+  DDRB |= 1 << PB5;
+
   // Slave address (0x42) + write
-  i2c_start(0x42, false);
+  if (i2c_start(0x42, false)) {
+    PORTB |= 1 << PB5;
+    return 1;
+  }
 
   // Send byte
-  i2c_tx_byte(0xAA);
+  if (i2c_tx_byte(0xA6)) {
+    PORTB |= 1 << PB5;
+    return 1;
+  }
 
   // Send stop sequence
   i2c_stop();
