@@ -1,5 +1,6 @@
 /*
- * Library to use I2C on a AVR Microcontroller without the hardware module
+ * Library to use I2C as master on a AVR Microcontroller
+ * without the hardware module
  * */
 
 // 10 kHz
