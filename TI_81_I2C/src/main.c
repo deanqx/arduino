@@ -12,6 +12,7 @@
 // Both are default high
 #define I2C_SCL PB0
 #define I2C_SDA PB1
+#define INTERNAL_LED PB1
 
 #define I2C_PORT_SCL PORTB
 #define I2C_PORT_SDA PORTB
@@ -30,8 +31,7 @@ uint8_t i2c_tx_byte(uint8_t data) {
   // Transmit each bit with the MSB first
   for (int8_t i = 7; i >= 0; i--) {
     // Clear SDA bit and then set
-    I2C_PORT_SDA = I2C_PORT_SDA & ~(1 << I2C_SDA) | ((data >> i) & 1)
-                                                        << I2C_SDA;
+    I2C_PORT_SDA = I2C_PORT_SDA & ~(1 << I2C_SDA) | (data >> i & 1) << I2C_SDA;
     _delay_us(I2C_T_3_US);
     I2C_PORT_SCL |= 1 << I2C_SCL;
     _delay_us(I2C_T_3_US);
@@ -47,7 +47,7 @@ uint8_t i2c_tx_byte(uint8_t data) {
   I2C_PORT_SCL |= 1 << I2C_SCL;
   _delay_us(I2C_T_3_US);
 
-  const bool ack = (I2C_PIN_SDA >> I2C_SDA) & 1;
+  const bool ack = I2C_PIN_SDA >> I2C_SDA & 1;
 
   I2C_PORT_SCL &= ~(1 << I2C_SCL);
   _delay_us(I2C_T_3_US);
@@ -95,17 +95,17 @@ void i2c_stop(void) {
 }
 
 int main(void) {
-  DDRB |= 1 << PB5;
+  DDRB |= 1 << INTERNAL_LED;
 
   // Slave address (0x42) + write
   if (i2c_start(0x42, false)) {
-    PORTB |= 1 << PB5;
+    PORTB |= 1 << INTERNAL_LED;
     return 1;
   }
 
   // Send byte
   if (i2c_tx_byte(0xA6)) {
-    PORTB |= 1 << PB5;
+    PORTB |= 1 << INTERNAL_LED;
     return 1;
   }
 
