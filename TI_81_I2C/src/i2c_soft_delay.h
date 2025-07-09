@@ -10,10 +10,13 @@
 /*
  * PB0 = D8
  * PB1 = D9
+ * PB2 = D10
  * Both are default high
  * */
 #define I2C_SCL PB0
 #define I2C_SDA PB1
+// PB2 can't be changed easily (low active)
+#define I2C_INT_LA PB2
 
 #define I2C_PORT_SCL PORTB
 #define I2C_PORT_SDA PORTB
@@ -34,6 +37,30 @@ void i2c_init(void) {
   I2C_PORT_SDA |= 1 << I2C_SDA;
   I2C_DDR_SCL |= 1 << I2C_SCL;
   I2C_DDR_SDA |= 1 << I2C_SDA;
+}
+
+/*
+ * Pin change to PCINT2 (PB2) will cause interrupt
+ * This can be used for example with the PCF8574 and its negative INT pin.
+ * When some bit D7..0 changes, it pulls the ~INT pin low.
+ * */
+void i2c_init_interrupt(void) {
+  /* https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf
+   * Page 56
+   * */
+
+  // PB2 = PCINT2 (Page 65)
+  PORTB &= ~(1 << PB2);
+
+  /* Pin Change Interrupt Control Register
+   * Enable interrupt on pin change for PCIE0 (PCINT7..0)
+   * */
+  PCICR |= 1 << PCIE0;
+
+  /* Pin Change Mask Register 0
+   * Only activate interrupt if PCINT2 changes
+   * */
+  PCMSK0 |= 1 << PCINT2;
 }
 
 /*
@@ -75,7 +102,7 @@ uint8_t i2c_tx_byte(uint8_t data) {
 /*
  * Read byte from slave
  * */
-uint8_t i2c_rx_byte() {
+uint8_t i2c_rx_byte(void) {
   I2C_DDR_SDA &= ~(1 << I2C_SDA);
 
   uint8_t data = 0;
