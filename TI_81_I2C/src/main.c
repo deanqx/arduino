@@ -24,7 +24,7 @@
 
 /*
  * Transmit 8 bits and check for acknowledge.
- * @returns >0 when error ocurs
+ * @returns 1 for acknowledge missing
  * */
 uint8_t i2c_tx_byte(uint8_t data) {
   // Transmit each bit with the MSB first
@@ -47,7 +47,7 @@ uint8_t i2c_tx_byte(uint8_t data) {
   I2C_PORT_SCL |= 1 << I2C_SCL;
   _delay_us(I2C_T_3_US);
 
-  const bool err = (I2C_PIN_SDA >> I2C_SDA) & 1;
+  const bool ack = (I2C_PIN_SDA >> I2C_SDA) & 1;
 
   I2C_PORT_SCL &= ~(1 << I2C_SCL);
   _delay_us(I2C_T_3_US);
@@ -55,14 +55,14 @@ uint8_t i2c_tx_byte(uint8_t data) {
   I2C_PORT_SDA |= 1 << I2C_SDA;
   I2C_DDR_SDA |= 1 << I2C_SDA;
 
-  return err;
+  return ack;
 }
 
 /*
  * Initialize as master and transmit start sequence
  * @param addr - 0100 001_ => 0x42
  * @param read - 0x01 => read; 0x00 => write
- * @returns >0 when error ocurs
+ * @returns 1 for acknowledge missing
  * */
 uint8_t i2c_start(uint8_t addr, bool read) {
   I2C_PORT_SCL |= 1 << I2C_SCL;
