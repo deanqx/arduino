@@ -1,6 +1,7 @@
 /*
  * Library to use I2C as master on a AVR Microcontroller
- * without the hardware module
+ * without the hardware module. Delays are used so this library
+ * is blocking.
  * */
 
 // 10 kHz

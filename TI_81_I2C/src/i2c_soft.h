@@ -1,19 +1,23 @@
 /*
- * Library to use I2C on a AVR Microcontroller without the hardware module
+ * Library to use I2C as master on a AVR Microcontroller
+ * without the hardware module. TIMER0 COMPA (interrupt)
+ * is used for the timing.
+ *
+ * 10kHz configured in `i2c_init()`.
  * */
 
-// 10 kHz
-#define I2C_F 10000
-#define I2C_T_4_US (1000000.0 / (I2C_F * 4.0))
+#ifndef F_CPU
+#warning F_CPU has to be defined with the CPU frequency in Hz!
+#endif
 
 /*
  * PB0 = D8
  * PB1 = D9
+ * PB2 = D10
  * Both are default high
  * */
 #define I2C_SCL PB0
 #define I2C_SDA PB1
-#define INTERNAL_LED PB5
 
 #define I2C_PORT_SCL PORTB
 #define I2C_PORT_SDA PORTB
@@ -24,107 +28,148 @@
 #define I2C_DDR_SCL DDRB
 #define I2C_DDR_SDA DDRB
 
+#include <avr/interrupt.h>
 #include <avr/io.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <util/delay.h>
+
+/*
+ * 0: Data set
+ * 1: Clock high
+ * 2: (Read)
+ * 3: Clock low
+ * */
+uint8_t i2c_phase = 0;
+
+// Bit 7 to 0
+int8_t i2c_current_bit = 7;
+
+uint8_t i2c_data = 0;
+
+volatile bool i2c_busy = 0;
+// 1: NACK, 0: ACK
+volatile bool i2c_nack = 0;
+
+ISR(TIMER0_COMPA_vect) {
+  I2C_PORT_SCL ^= 1 << I2C_SCL;
+  return;
+
+  switch (i2c_phase) {
+  case 0:
+    I2C_PORT_SDA = I2C_PORT_SDA & ~(1 << I2C_SDA) |
+                   (i2c_data >> i2c_current_bit & 1) << I2C_SDA;
+    i2c_current_bit--;
+    break;
+  case 1:
+    I2C_PORT_SCL |= 1 << I2C_SCL;
+    break;
+  case 2:
+    if (i2c_current_bit >= 0) {
+      break;
+    }
+
+    // -- Check acknowledge
+
+    I2C_DDR_SDA &= ~(1 << I2C_SDA);
+
+    i2c_nack = I2C_PIN_SDA >> I2C_SDA & 1;
+
+    I2C_PORT_SDA |= 1 << I2C_SDA;
+    I2C_DDR_SDA |= 1 << I2C_SDA;
+    break;
+  case 3:
+    I2C_PORT_SCL &= ~(1 << I2C_SCL);
+
+    // Exit when byte has been transmitted
+    if (i2c_current_bit < 0) {
+      i2c_busy = 0;
+
+      // Disable Timer0 Comp A
+      TIMSK0 &= ~(1 << OCIE0A);
+    }
+
+    break;
+  }
+
+  i2c_phase++;
+  if (i2c_phase > 3) {
+    i2c_phase = 0;
+  }
+}
 
 void i2c_init(void) {
   I2C_PORT_SCL |= 1 << I2C_SCL;
   I2C_PORT_SDA |= 1 << I2C_SDA;
   I2C_DDR_SCL |= 1 << I2C_SCL;
   I2C_DDR_SDA |= 1 << I2C_SDA;
+
+  // https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf
+
+  // CTC mode (OCRA is limit)
+  TCCR0A |= 1 << WGM01;
+
+  // 10kHz divided into 4 phases
+
+  /*
+   * Clock Select (Page 87)
+   * 1: 1
+   * 2: 1/8
+   * 3: 1/64
+   * 4: 1/256
+   * 5: 1/1024
+   * */
+  TCCR0B |= 2;
+
+  /* Output Compare Register A
+   * the timer counts from 0 to OCR0A (inclusive)
+   * 49 + 1 = 50
+   * */
+  OCR0A = 49;
+}
+
+/*
+ * Transmit start sequence
+ * */
+void i2c_start() {
+  I2C_PORT_SDA &= ~(1 << I2C_SDA);
+  _delay_us(25);
+
+  I2C_PORT_SCL &= ~(1 << I2C_SCL);
+  _delay_us(25);
 }
 
 /*
  * Transmit 8 bits and check for acknowledge.
- * @returns 1 for acknowledge missing
+ * @return 0: Successful, 1: Bus is busy
  * */
-uint8_t i2c_tx_byte(uint8_t data) {
-  // Transmit each bit with the MSB first
-  for (int8_t i = 7; i >= 0; i--) {
-    // Clear SDA bit and then set
-    I2C_PORT_SDA = I2C_PORT_SDA & ~(1 << I2C_SDA) | (data >> i & 1) << I2C_SDA;
-    _delay_us(I2C_T_4_US);
-    I2C_PORT_SCL |= 1 << I2C_SCL;
-    _delay_us(2 * I2C_T_4_US);
-    I2C_PORT_SCL &= ~(1 << I2C_SCL);
-    _delay_us(I2C_T_4_US);
+uint8_t i2c_begin_tx(uint8_t data) {
+  if (i2c_busy) {
+    return 1;
   }
 
-  // Check acknowledge
-  I2C_DDR_SDA &= ~(1 << I2C_SDA);
+  i2c_phase = 0;
+  i2c_current_bit = 7;
+  i2c_data = data;
+  i2c_busy = 1;
+  i2c_nack = 0;
 
-  // Delay to equalize frequency
-  _delay_us(I2C_T_4_US);
+  // Reset Timer
+  OCR0A = 0;
 
-  I2C_PORT_SCL |= 1 << I2C_SCL;
-  _delay_us(2 * I2C_T_4_US);
+  // Enable Timer0 Comp A
+  TIMSK0 |= 1 << OCIE0A;
 
-  const bool ack = I2C_PIN_SDA >> I2C_SDA & 1;
-
-  I2C_PORT_SCL &= ~(1 << I2C_SCL);
-  _delay_us(I2C_T_4_US);
-
-  I2C_PORT_SDA |= 1 << I2C_SDA;
-  I2C_DDR_SDA |= 1 << I2C_SDA;
-
-  return ack;
+  return 0;
 }
 
 /*
- * Read byte from slave
+ * Wait for action to finish.
+ * Check `i2c_ack` after transmitting.
  * */
-uint8_t i2c_rx_byte() {
-  I2C_DDR_SDA &= ~(1 << I2C_SDA);
-
-  uint8_t data = 0;
-
-  for (int8_t i = 7; i >= 0; i--) {
-    // Delay to equalize frequency between read and write
-    _delay_us(I2C_T_4_US);
-
-    I2C_PORT_SCL |= 1 << I2C_SCL;
-    _delay_us(2 * I2C_T_4_US);
-
-    data |= (I2C_PIN_SDA >> I2C_SDA & 1) << i;
-
-    I2C_PORT_SCL &= ~(1 << I2C_SCL);
-    _delay_us(I2C_T_4_US);
-  }
-
-  // Send Acknowledge
-  // ACK: Read again
-  // NACK: Have to stop
-
-  // Clear bit and then set
-  I2C_PORT_SDA = I2C_PORT_SDA & ~(1 << I2C_SDA);
-  I2C_DDR_SDA |= 1 << I2C_SDA;
-  _delay_us(I2C_T_4_US);
-
-  I2C_PORT_SCL |= 1 << I2C_SCL;
-  _delay_us(2 * I2C_T_4_US);
-
-  I2C_PORT_SCL &= ~(1 << I2C_SCL);
-  _delay_us(I2C_T_4_US);
-
-  return data;
-}
-
-/*
- * Initialize as master and transmit start sequence
- * @param addr - Slaveaddress. 0100 001_ => 0x42
- * @param read - 1: read; 0: write
- * @returns 1 for acknowledge missing
- * */
-uint8_t i2c_start(uint8_t addr, bool read) {
-  I2C_PORT_SDA &= ~(1 << I2C_SDA);
-  _delay_us(2 * I2C_T_4_US);
-
-  I2C_PORT_SCL &= ~(1 << I2C_SCL);
-  _delay_us(I2C_T_4_US);
-
-  return i2c_tx_byte(addr | read);
+void i2c_wait() {
+  while (i2c_busy)
+    ;
 }
 
 /*
@@ -133,11 +178,11 @@ uint8_t i2c_start(uint8_t addr, bool read) {
 void i2c_stop(void) {
   I2C_PORT_SCL &= ~(1 << I2C_SCL);
   I2C_PORT_SDA &= ~(1 << I2C_SDA);
-  _delay_us(I2C_T_4_US);
+  _delay_us(25);
 
   I2C_PORT_SCL |= 1 << I2C_SCL;
-  _delay_us(2 * I2C_T_4_US);
+  _delay_us(25);
 
   I2C_PORT_SDA |= 1 << I2C_SDA;
-  _delay_us(2 * I2C_T_4_US);
+  _delay_us(25);
 }
