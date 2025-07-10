@@ -21,13 +21,23 @@ int main(void) {
   sei();
 
   i2c_start();
-  i2c_begin_tx(0xA6);
 
+  // Address: 0x42 + write
+  i2c_begin_tx(0x42);
   i2c_wait();
 
   if (i2c_nack) {
     error_handler();
   }
+
+  i2c_begin_tx(0xA6);
+  i2c_wait();
+
+  if (i2c_nack) {
+    error_handler();
+  }
+
+  i2c_stop();
 
   while (1) {
   }
