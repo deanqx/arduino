@@ -41,12 +41,9 @@
  * 3: Clock low
  * */
 uint8_t i2c_phase = 0;
-
 // Bit 7 to 0
-int8_t i2c_current_bit = 7;
-
+int8_t i2c_current_bit = 0;
 uint8_t i2c_data = 0;
-
 volatile bool i2c_busy = 0;
 // 1: NACK, 0: ACK
 volatile bool i2c_nack = 0;
@@ -54,36 +51,42 @@ volatile bool i2c_nack = 0;
 ISR(TIMER0_COMPA_vect) {
   switch (i2c_phase) {
   case 0:
+    i2c_current_bit--;
+
+    if (i2c_current_bit < 0) {
+      // Begin listening for acknowledge
+      I2C_DDR_SDA &= ~(1 << I2C_SDA);
+      break;
+    }
+
     I2C_PORT_SDA = I2C_PORT_SDA & ~(1 << I2C_SDA) |
                    (i2c_data >> i2c_current_bit & 1) << I2C_SDA;
-    i2c_current_bit--;
     break;
   case 1:
     I2C_PORT_SCL |= 1 << I2C_SCL;
     break;
   case 2:
-    if (i2c_current_bit >= 0) {
+    if (i2c_current_bit < 0) {
+      // Check acknowledge
+      i2c_nack = I2C_PIN_SDA >> I2C_SDA & 1;
       break;
     }
 
-    // -- Check acknowledge
-
-    I2C_DDR_SDA &= ~(1 << I2C_SDA);
-
-    i2c_nack = I2C_PIN_SDA >> I2C_SDA & 1;
-
-    I2C_PORT_SDA |= 1 << I2C_SDA;
-    I2C_DDR_SDA |= 1 << I2C_SDA;
     break;
   case 3:
     I2C_PORT_SCL &= ~(1 << I2C_SCL);
 
-    // Exit when byte has been transmitted
     if (i2c_current_bit < 0) {
+      // End listening for acknowledge
+      I2C_PORT_SDA |= 1 << I2C_SDA;
+      I2C_DDR_SDA |= 1 << I2C_SDA;
+
+      // -- Exit when byte has been transmitted
       i2c_busy = 0;
 
       // Disable Timer0 Comp A
       TIMSK0 &= ~(1 << OCIE0A);
+      break;
     }
 
     break;
@@ -126,17 +129,6 @@ void i2c_init(void) {
 }
 
 /*
- * Transmit start sequence
- * */
-void i2c_start() {
-  I2C_PORT_SDA &= ~(1 << I2C_SDA);
-  _delay_us(25);
-
-  I2C_PORT_SCL &= ~(1 << I2C_SCL);
-  _delay_us(25);
-}
-
-/*
  * Transmit 8 bits and check for acknowledge.
  * @return 0: Successful, 1: Bus is busy
  * */
@@ -146,7 +138,7 @@ uint8_t i2c_begin_tx(uint8_t data) {
   }
 
   i2c_phase = 0;
-  i2c_current_bit = 7;
+  i2c_current_bit = 8;
   i2c_data = data;
   i2c_busy = 1;
   i2c_nack = 0;
@@ -158,6 +150,17 @@ uint8_t i2c_begin_tx(uint8_t data) {
   TIMSK0 |= 1 << OCIE0A;
 
   return 0;
+}
+
+/*
+ * Transmit start sequence
+ * */
+void i2c_start() {
+  I2C_PORT_SDA &= ~(1 << I2C_SDA);
+  _delay_us(25);
+
+  I2C_PORT_SCL &= ~(1 << I2C_SCL);
+  _delay_us(25);
 }
 
 /*
