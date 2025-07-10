@@ -52,9 +52,6 @@ volatile bool i2c_busy = 0;
 volatile bool i2c_nack = 0;
 
 ISR(TIMER0_COMPA_vect) {
-  I2C_PORT_SCL ^= 1 << I2C_SCL;
-  return;
-
   switch (i2c_phase) {
   case 0:
     I2C_PORT_SDA = I2C_PORT_SDA & ~(1 << I2C_SDA) |
@@ -155,7 +152,7 @@ uint8_t i2c_begin_tx(uint8_t data) {
   i2c_nack = 0;
 
   // Reset Timer
-  OCR0A = 0;
+  TCNT0 = 0;
 
   // Enable Timer0 Comp A
   TIMSK0 |= 1 << OCIE0A;
