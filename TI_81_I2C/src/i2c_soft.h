@@ -1,19 +1,14 @@
 /*
  * Library to use I2C as master on a AVR Microcontroller
- * without the hardware module. TIMER0 COMPA (interrupt)
+ * without the hardware module. Timer0 CompA (interrupt)
  * is used for the timing.
  *
- * 10kHz configured in `i2c_init()`.
+ * Timer0 CompA is configured in `i2c_init()`.
  * */
-
-#ifndef F_CPU
-#warning F_CPU has to be defined with the CPU frequency in Hz!
-#endif
 
 /*
  * PB0 = D8
  * PB1 = D9
- * PB2 = D10
  * Both are default high
  * */
 #define I2C_SCL PB0
@@ -35,20 +30,28 @@
 #include <util/delay.h>
 
 /*
- * 0: Data set
+ * 0: Send data
  * 1: Clock high
- * 2: (Read)
+ * 2: Read data
  * 3: Clock low
  * */
 uint8_t i2c_phase = 0;
+
 // Bit 7 to 0
 int8_t i2c_current_bit = 0;
 uint8_t i2c_data = 0;
-volatile bool i2c_busy = 0;
+
 // 1: NACK, 0: ACK
 volatile bool i2c_nack = 0;
+volatile bool i2c_busy = 0;
 
-ISR(TIMER0_COMPA_vect) {
+/*
+ * This function advances one phase.
+ * A full clock cycle is divided into 4 phases.
+ *
+ * Usually called by the Interrupt Server Routine.
+ * */
+void advance_phase() {
   switch (i2c_phase) {
   case 0:
     i2c_current_bit--;
@@ -82,10 +85,10 @@ ISR(TIMER0_COMPA_vect) {
       I2C_DDR_SDA |= 1 << I2C_SDA;
 
       // -- Exit when byte has been transmitted
-      i2c_busy = 0;
 
       // Disable Timer0 Comp A
       TIMSK0 &= ~(1 << OCIE0A);
+      i2c_busy = 0;
       break;
     }
 
@@ -98,21 +101,25 @@ ISR(TIMER0_COMPA_vect) {
   }
 }
 
+ISR(TIMER0_COMPA_vect) { advance_phase(); }
+
 void i2c_init(void) {
   I2C_PORT_SCL |= 1 << I2C_SCL;
   I2C_PORT_SDA |= 1 << I2C_SDA;
   I2C_DDR_SCL |= 1 << I2C_SCL;
   I2C_DDR_SDA |= 1 << I2C_SDA;
 
-  // https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf
+  /* -- Setup interrupt timer
+   *
+   * https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf
+   * */
 
-  // CTC mode (OCRA is limit)
+  // CTC mode: OCRA is limit
   TCCR0A |= 1 << WGM01;
 
-  // 10kHz divided into 4 phases
+  // 10 kHz are divided into 4 phases, so each phase works with 40 kHz
 
-  /*
-   * Clock Select (Page 87)
+  /* Clock Select (Page 87)
    * 1: 1
    * 2: 1/8
    * 3: 1/64
@@ -130,6 +137,7 @@ void i2c_init(void) {
 
 /*
  * Transmit 8 bits and check for acknowledge.
+ * Wait with `i2c_wait()` for transmission to complete.
  * @return 0: Successful, 1: Bus is busy
  * */
 uint8_t i2c_begin_tx(uint8_t data) {
@@ -140,8 +148,8 @@ uint8_t i2c_begin_tx(uint8_t data) {
   i2c_phase = 0;
   i2c_current_bit = 8;
   i2c_data = data;
-  i2c_busy = 1;
   i2c_nack = 0;
+  i2c_busy = 1;
 
   // Reset Timer
   TCNT0 = 0;
@@ -178,7 +186,7 @@ void i2c_wait() {
 void i2c_stop(void) {
   I2C_PORT_SCL &= ~(1 << I2C_SCL);
   I2C_PORT_SDA &= ~(1 << I2C_SDA);
-  _delay_us(25);
+  _delay_us(50);
 
   I2C_PORT_SCL |= 1 << I2C_SCL;
   _delay_us(25);
