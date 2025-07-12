@@ -252,7 +252,7 @@ uint8_t i2c_read_async(uint8_t data) {
  * */
 void i2c_start_async(uint8_t addr, bool read_mode) {
   I2C_PORT_SDA &= ~(1 << I2C_SDA);
-  _delay_us(25);
+  _delay_us(50);
 
   I2C_PORT_SCL &= ~(1 << I2C_SCL);
   _delay_us(25);
@@ -279,8 +279,8 @@ void i2c_stop(void) {
   _delay_us(50);
 
   I2C_PORT_SCL |= 1 << I2C_SCL;
-  _delay_us(25);
+  _delay_us(50);
 
   I2C_PORT_SDA |= 1 << I2C_SDA;
-  _delay_us(25);
+  _delay_us(50); // Cooldown
 }
