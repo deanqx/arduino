@@ -23,15 +23,15 @@ int main(void) {
   i2c_start();
 
   // Address: 0x42 + write
-  i2c_begin_tx(0x42);
-  i2c_wait();
+  i2c_send_async(0x41);
+  i2c_await();
 
   if (i2c_nack) {
     error_handler();
   }
 
-  i2c_begin_tx(0xA6);
-  i2c_wait();
+  i2c_read_async(0xA6);
+  i2c_await();
 
   if (i2c_nack) {
     error_handler();
