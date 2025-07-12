@@ -1,5 +1,7 @@
 SRC_DIR = src
 BUILD_DIR = build
+# -fshort-enums: Use as less space as possible for enums
+COMPILER_FLAGS = -fshort-enums
 
 O ?= s
 port ?= /dev/ttyUSB0
@@ -16,10 +18,10 @@ deps:
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c force_rebuild
 	@mkdir -p build
-	avr-gcc -O$(O) -D$(D) -mmcu=atmega328p -c $< -o $@
+	avr-gcc -O$(O) $(COMPILER_FLAGS) -D$(D) -mmcu=atmega328p -c $< -o $@
 
 build: $(OBJS)
-	avr-gcc -O$(O) -mmcu=atmega328p -o $(BUILD_DIR)/compiled.bin $(OBJS)
+	avr-gcc -O$(O) $(COMPILER_FLAGS) -D$(D)  -mmcu=atmega328p -o $(BUILD_DIR)/compiled.bin $(OBJS)
 	avr-objcopy -O ihex -R .eeprom $(BUILD_DIR)/compiled.bin $(BUILD_DIR)/compiled.hex
 
 upload:
@@ -30,7 +32,7 @@ size: build
 
 asm: build
 	@mkdir -p $(BUILD_DIR)
-	avr-gcc -S -Os -DF_CPU=16000000UL -mmcu=atmega328p -o $(BUILD_DIR)/compiled.asm $(SRC_DIR)/main.c
+	avr-gcc -S -O$(O) $(COMPILER_FLAGS) -D$(D) -mmcu=atmega328p -o $(BUILD_DIR)/compiled.asm $(SRC_DIR)/main.c
 
 clean:
 	rm -fr $(BUILD_DIR)

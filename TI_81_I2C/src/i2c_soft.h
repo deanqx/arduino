@@ -61,8 +61,12 @@ void i2c_advance_phase_write(void) {
       break;
     }
 
-    I2C_PORT_SDA = I2C_PORT_SDA & ~(1 << I2C_SDA) |
-                   (i2c_data >> i2c_bit_index & 1) << I2C_SDA;
+    if (i2c_data >> i2c_bit_index & 1) {
+      I2C_PORT_SDA |= 1 << I2C_SDA;
+    } else {
+      I2C_PORT_SDA &= ~(1 << I2C_SDA);
+    }
+
     I2C_DDR_SDA |= 1 << I2C_SDA;
     break;
   case I2C_PHASE_SCL_HIGH:
@@ -126,7 +130,9 @@ void i2c_advance_phase_read(void) {
     I2C_PORT_SCL |= 1 << I2C_SCL;
     break;
   case I2C_PHASE_READ:
-    i2c_data |= (I2C_PIN_SDA >> I2C_SDA & 1) << i2c_bit_index;
+    if (I2C_PIN_SDA >> I2C_SDA & 1) {
+      i2c_data |= 1 << i2c_bit_index;
+    }
 
     break;
   case I2C_PHASE_SCL_LOW:
