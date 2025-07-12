@@ -14,20 +14,16 @@ void error_handler(void) {
     ;
 }
 
-int main(void) {
-  DDRB |= 1 << INTERNAL_LED;
-
-  i2c_init();
-  sei();
-
-  i2c_start_async(0x40, true);
+void test_send(void) {
+  // Start writing to 0x40
+  i2c_start_async(0x40, false);
   i2c_await();
 
   if (i2c_nack) {
     error_handler();
   }
 
-  i2c_read_async(0xA6);
+  i2c_send_async(0xA6);
   i2c_await();
 
   if (i2c_nack) {
@@ -35,6 +31,39 @@ int main(void) {
   }
 
   i2c_stop();
+}
+
+void test_read(void) {
+  // Start reading to 0x40
+  i2c_start_async(0x40, true);
+  i2c_await();
+
+  if (i2c_nack) {
+    error_handler();
+  }
+
+  i2c_read_async();
+  i2c_await();
+
+  if (i2c_nack) {
+    error_handler();
+  }
+
+  i2c_stop();
+
+  if (i2c_data != 0xA6) {
+    error_handler();
+  }
+}
+
+int main(void) {
+  DDRB |= 1 << INTERNAL_LED;
+
+  i2c_init();
+  sei();
+
+  test_send();
+  test_read();
 
   while (1) {
   }

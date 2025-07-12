@@ -29,21 +29,19 @@
 #include <stdint.h>
 #include <util/delay.h>
 
-/*
- * 0: Send data
- * 1: Clock high
- * 2: Read data
- * 3: Clock low
- * */
-uint8_t i2c_phase = 0;
+typedef enum {
+  I2C_PHASE_SET_DATA,
+  I2C_PHASE_SCL_HIGH,
+  I2C_PHASE_READ,
+  I2C_PHASE_SCL_LOW
+} i2c_phase_t;
 
-// Bit 7 to 0
-int8_t i2c_current_bit = 0;
+i2c_phase_t i2c_phase = 0;
+int8_t i2c_bit_index = 0; // Bit 7 to 0 (-1 => ack)
 uint8_t i2c_data = 0;
 bool i2c_read_mode = false;
 
-// 1: NACK, 0: ACK
-volatile bool i2c_nack = true;
+volatile bool i2c_nack = true; // 1: NACK, 0: ACK
 volatile bool i2c_busy = false;
 
 /*
@@ -52,35 +50,35 @@ volatile bool i2c_busy = false;
  *
  * Usually called by the Interrupt Server Routine.
  * */
-void i2c_advance_phase_write() {
+void i2c_advance_phase_write(void) {
   switch (i2c_phase) {
-  case 0:
-    i2c_current_bit--;
+  case I2C_PHASE_SET_DATA:
+    i2c_bit_index--;
 
-    if (i2c_current_bit < 0) {
+    if (i2c_bit_index < 0) {
       // Begin listening for acknowledge
       I2C_DDR_SDA &= ~(1 << I2C_SDA);
       break;
     }
 
     I2C_PORT_SDA = I2C_PORT_SDA & ~(1 << I2C_SDA) |
-                   (i2c_data >> i2c_current_bit & 1) << I2C_SDA;
+                   (i2c_data >> i2c_bit_index & 1) << I2C_SDA;
     I2C_DDR_SDA |= 1 << I2C_SDA;
     break;
-  case 1:
+  case I2C_PHASE_SCL_HIGH:
     I2C_PORT_SCL |= 1 << I2C_SCL;
     break;
-  case 2:
-    if (i2c_current_bit < 0) {
+  case I2C_PHASE_READ:
+    if (i2c_bit_index < 0) {
       // Check acknowledge
       i2c_nack = I2C_PIN_SDA >> I2C_SDA & 1;
     }
 
     break;
-  case 3:
+  case I2C_PHASE_SCL_LOW:
     I2C_PORT_SCL &= ~(1 << I2C_SCL);
 
-    if (i2c_current_bit < 0) {
+    if (i2c_bit_index < 0) {
       // End listening for acknowledge
       I2C_PORT_SDA |= 1 << I2C_SDA;
       I2C_DDR_SDA |= 1 << I2C_SDA;
@@ -96,8 +94,8 @@ void i2c_advance_phase_write() {
   }
 
   i2c_phase++;
-  if (i2c_phase > 3) {
-    i2c_phase = 0;
+  if (i2c_phase > I2C_PHASE_SCL_LOW) {
+    i2c_phase = I2C_PHASE_SET_DATA;
   }
 }
 
@@ -107,12 +105,12 @@ void i2c_advance_phase_write() {
  *
  * Usually called by the Interrupt Server Routine.
  * */
-void i2c_advance_phase_read() {
+void i2c_advance_phase_read(void) {
   switch (i2c_phase) {
-  case 0:
-    i2c_current_bit--;
+  case I2C_PHASE_SET_DATA:
+    i2c_bit_index--;
 
-    if (i2c_current_bit < 0) {
+    if (i2c_bit_index < 0) {
       // Setting acknowledge low
       I2C_PORT_SDA &= ~(1 << I2C_SDA);
       I2C_DDR_SDA |= 1 << I2C_SDA;
@@ -124,17 +122,17 @@ void i2c_advance_phase_read() {
     I2C_DDR_SDA &= ~(1 << I2C_SDA);
 
     break;
-  case 1:
+  case I2C_PHASE_SCL_HIGH:
     I2C_PORT_SCL |= 1 << I2C_SCL;
     break;
-  case 2:
-    i2c_data |= (I2C_PIN_SDA >> I2C_SDA & 1) << i2c_current_bit;
+  case I2C_PHASE_READ:
+    i2c_data |= (I2C_PIN_SDA >> I2C_SDA & 1) << i2c_bit_index;
 
     break;
-  case 3:
+  case I2C_PHASE_SCL_LOW:
     I2C_PORT_SCL &= ~(1 << I2C_SCL);
 
-    if (i2c_current_bit < 0) {
+    if (i2c_bit_index < 0) {
       // -- Exit when byte has been read
       // Disable Timer0 Comp A
       TIMSK0 &= ~(1 << OCIE0A);
@@ -160,9 +158,10 @@ ISR(TIMER0_COMPA_vect) {
 }
 
 // Reset index variables
-void i2c_reset() {
-  i2c_phase = 0;
-  i2c_current_bit = 8;
+void i2c_reset(void) {
+  i2c_phase = I2C_PHASE_SET_DATA;
+  i2c_data = 0;
+  i2c_bit_index = 8;
   i2c_nack = true;
 }
 
@@ -229,11 +228,10 @@ uint8_t i2c_send_async(uint8_t data) {
  * Wait with `i2c_await()` for transmission to complete.
  * @return 0: Successful, 1: Bus is busy
  * */
-uint8_t i2c_read_async(uint8_t data) {
+uint8_t i2c_read_async(void) {
   i2c_reset();
 
   i2c_busy = true;
-  i2c_data = data;
   i2c_read_mode = true;
 
   // Reset Timer
