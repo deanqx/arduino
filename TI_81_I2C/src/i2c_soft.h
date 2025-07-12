@@ -40,18 +40,19 @@ uint8_t i2c_phase = 0;
 // Bit 7 to 0
 int8_t i2c_current_bit = 0;
 uint8_t i2c_data = 0;
+bool i2c_read_mode = false;
 
 // 1: NACK, 0: ACK
-volatile bool i2c_nack = 0;
-volatile bool i2c_busy = 0;
+volatile bool i2c_nack = true;
+volatile bool i2c_busy = false;
 
 /*
- * This function advances one phase.
+ * This function advances one phase for write mode.
  * A full clock cycle is divided into 4 phases.
  *
  * Usually called by the Interrupt Server Routine.
  * */
-void advance_phase() {
+void i2c_advance_phase_write() {
   switch (i2c_phase) {
   case 0:
     i2c_current_bit--;
@@ -64,6 +65,7 @@ void advance_phase() {
 
     I2C_PORT_SDA = I2C_PORT_SDA & ~(1 << I2C_SDA) |
                    (i2c_data >> i2c_current_bit & 1) << I2C_SDA;
+    I2C_DDR_SDA |= 1 << I2C_SDA;
     break;
   case 1:
     I2C_PORT_SCL |= 1 << I2C_SCL;
@@ -72,7 +74,6 @@ void advance_phase() {
     if (i2c_current_bit < 0) {
       // Check acknowledge
       i2c_nack = I2C_PIN_SDA >> I2C_SDA & 1;
-      break;
     }
 
     break;
@@ -89,6 +90,55 @@ void advance_phase() {
       // Disable Timer0 Comp A
       TIMSK0 &= ~(1 << OCIE0A);
       i2c_busy = 0;
+    }
+
+    break;
+  }
+
+  i2c_phase++;
+  if (i2c_phase > 3) {
+    i2c_phase = 0;
+  }
+}
+
+/*
+ * This function advances one phase for read mode.
+ * A full clock cycle is divided into 4 phases.
+ *
+ * Usually called by the Interrupt Server Routine.
+ * */
+void i2c_advance_phase_read() {
+  switch (i2c_phase) {
+  case 0:
+    i2c_current_bit--;
+
+    if (i2c_current_bit < 0) {
+      // Setting acknowledge low
+      I2C_PORT_SDA &= ~(1 << I2C_SDA);
+      I2C_DDR_SDA |= 1 << I2C_SDA;
+
+      i2c_nack = false;
+      break;
+    }
+
+    I2C_DDR_SDA &= ~(1 << I2C_SDA);
+
+    break;
+  case 1:
+    I2C_PORT_SCL |= 1 << I2C_SCL;
+    break;
+  case 2:
+    i2c_data |= (I2C_PIN_SDA >> I2C_SDA & 1) << i2c_current_bit;
+
+    break;
+  case 3:
+    I2C_PORT_SCL &= ~(1 << I2C_SCL);
+
+    if (i2c_current_bit < 0) {
+      // -- Exit when byte has been read
+      // Disable Timer0 Comp A
+      TIMSK0 &= ~(1 << OCIE0A);
+      i2c_busy = 0;
       break;
     }
 
@@ -101,9 +151,24 @@ void advance_phase() {
   }
 }
 
-ISR(TIMER0_COMPA_vect) { advance_phase(); }
+ISR(TIMER0_COMPA_vect) {
+  if (i2c_read_mode) {
+    i2c_advance_phase_read();
+  } else {
+    i2c_advance_phase_write();
+  }
+}
+
+// Reset index variables
+void i2c_reset() {
+  i2c_phase = 0;
+  i2c_current_bit = 8;
+  i2c_nack = true;
+}
 
 void i2c_init(void) {
+  i2c_reset();
+
   I2C_PORT_SCL |= 1 << I2C_SCL;
   I2C_PORT_SDA |= 1 << I2C_SDA;
   I2C_DDR_SCL |= 1 << I2C_SCL;
@@ -136,31 +201,6 @@ void i2c_init(void) {
 }
 
 /*
- * Transmit 8 bits and check for acknowledge.
- * Wait with `i2c_wait()` for transmission to complete.
- * @return 0: Successful, 1: Bus is busy
- * */
-uint8_t i2c_begin_tx(uint8_t data) {
-  if (i2c_busy) {
-    return 1;
-  }
-
-  i2c_phase = 0;
-  i2c_current_bit = 8;
-  i2c_data = data;
-  i2c_nack = 0;
-  i2c_busy = 1;
-
-  // Reset Timer
-  TCNT0 = 0;
-
-  // Enable Timer0 Comp A
-  TIMSK0 |= 1 << OCIE0A;
-
-  return 0;
-}
-
-/*
  * Transmit start sequence
  * */
 void i2c_start() {
@@ -172,10 +212,52 @@ void i2c_start() {
 }
 
 /*
+ * Transmit 8 bits and check for acknowledge.
+ * Wait with `i2c_wait()` for transmission to complete.
+ * @return 0: Successful, 1: Bus is busy
+ * */
+uint8_t i2c_send_async(uint8_t data) {
+  i2c_reset();
+
+  i2c_busy = true;
+  i2c_data = data;
+  i2c_read_mode = false;
+
+  // Reset Timer
+  TCNT0 = 0;
+
+  // Enable Timer0 Comp A
+  TIMSK0 |= 1 << OCIE0A;
+
+  return 0;
+}
+
+/*
+ * Read 8 bits and send acknowledge.
+ * Wait with `i2c_wait()` for transmission to complete.
+ * @return 0: Successful, 1: Bus is busy
+ * */
+uint8_t i2c_read_async(uint8_t data) {
+  i2c_reset();
+
+  i2c_busy = true;
+  i2c_data = data;
+  i2c_read_mode = true;
+
+  // Reset Timer
+  TCNT0 = 0;
+
+  // Enable Timer0 Comp A
+  TIMSK0 |= 1 << OCIE0A;
+
+  return 0;
+}
+
+/*
  * Wait for action to finish.
  * Check `i2c_ack` after transmitting.
  * */
-void i2c_wait() {
+void i2c_await() {
   while (i2c_busy)
     ;
 }
