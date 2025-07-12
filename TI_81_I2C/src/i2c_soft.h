@@ -166,6 +166,9 @@ void i2c_reset() {
   i2c_nack = true;
 }
 
+/*
+ * Call `sei()` after all interrupts are configured.
+ * */
 void i2c_init(void) {
   i2c_reset();
 
@@ -201,19 +204,8 @@ void i2c_init(void) {
 }
 
 /*
- * Transmit start sequence
- * */
-void i2c_start() {
-  I2C_PORT_SDA &= ~(1 << I2C_SDA);
-  _delay_us(25);
-
-  I2C_PORT_SCL &= ~(1 << I2C_SCL);
-  _delay_us(25);
-}
-
-/*
  * Transmit 8 bits and check for acknowledge.
- * Wait with `i2c_wait()` for transmission to complete.
+ * Wait with `i2c_await()` for transmission to complete.
  * @return 0: Successful, 1: Bus is busy
  * */
 uint8_t i2c_send_async(uint8_t data) {
@@ -234,7 +226,7 @@ uint8_t i2c_send_async(uint8_t data) {
 
 /*
  * Read 8 bits and send acknowledge.
- * Wait with `i2c_wait()` for transmission to complete.
+ * Wait with `i2c_await()` for transmission to complete.
  * @return 0: Successful, 1: Bus is busy
  * */
 uint8_t i2c_read_async(uint8_t data) {
@@ -251,6 +243,22 @@ uint8_t i2c_read_async(uint8_t data) {
   TIMSK0 |= 1 << OCIE0A;
 
   return 0;
+}
+
+/*
+ * Transmit start sequence and address with read mode bit.
+ * Address format: 0100 010 => 0x44
+ * Wait with `i2c_await()` for transmission to complete.
+ * */
+void i2c_start_async(uint8_t addr, bool read_mode) {
+  I2C_PORT_SDA &= ~(1 << I2C_SDA);
+  _delay_us(25);
+
+  I2C_PORT_SCL &= ~(1 << I2C_SCL);
+  _delay_us(25);
+
+  // Clear read mode bit and then set
+  i2c_send_async(addr & ~1 | read_mode);
 }
 
 /*

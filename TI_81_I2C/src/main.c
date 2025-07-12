@@ -20,10 +20,7 @@ int main(void) {
   i2c_init();
   sei();
 
-  i2c_start();
-
-  // Address: 0x42 + write
-  i2c_send_async(0x41);
+  i2c_start_async(0x40, true);
   i2c_await();
 
   if (i2c_nack) {
