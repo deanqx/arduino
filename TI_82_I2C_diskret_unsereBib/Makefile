@@ -14,7 +14,7 @@ OBJS = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(i))
 all: build upload
 
 deps:
-	sudo pacman -S avr-libc avrdude avr-binutils avr-gcc
+	sudo pacman -Sy avr-libc avrdude avr-binutils avr-gcc
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c force_rebuild
 	@mkdir -p build
