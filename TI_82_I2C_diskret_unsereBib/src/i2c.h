@@ -8,10 +8,8 @@
  * M.Schmidt 20160630
  *
  * Version 		Aenderung		Status
- * 0.1			Aufsplittung	PCF8575TS Write noch nicht geprüft und 
+ * 0.1			Aufsplittung	PCF8575TS Write noch nicht geprüft und
  * esen der Eingänge auch noch nicht angepasst!
- *
- *
  *
  */
 
@@ -61,8 +59,8 @@ void i2c_init(void) {
 #define i2cPORT PORTB
 #define i2cPIN PINB
 #define i2cDDR DDRB
-#define i2cSCLpin PINB0
-#define i2cSDApin PINB1
+#define i2cSCLpin PB0
+#define i2cSDApin PB1
 #define TW_SLA_ACK 1  // Antwort ADDR vom Slave
 #define TW_DATA_ACK 1 // Antwort Data vom Slave
 #define TW_WRITE 0
@@ -175,9 +173,11 @@ uint8_t i2c_receive(uint8_t ack) {
     if (readBit())
       daten |= (1 << (i - 1));
   }
-  //	if (ACK())
+
+  // pull low to send ack
+  i2cPORT &= ~(1 << i2cSDApin);
+  takt();
   return daten;
-//	return 0;
 #else
   if (ack == 1)
     TWCR = _BV(TWINT) | _BV(TWEA) | _BV(TWEN); // send start condition
@@ -246,6 +246,16 @@ uint16_t i2c_read(uint8_t basis, uint8_t chipID, uint16_t cmd, uint8_t typ) {
   uint8_t dWert[2] = {0};
   uint8_t basisAddr = (basis | (chipID << 1));
 
+#if (TWI_Diskret == 1)
+  while (1) {
+    i2c_start();
+    if (i2c_send(basisAddr | TW_READ) != TW_SLA_ACK)
+      i2c_stop();
+    else
+      break;
+  }
+#endif
+
   switch (typ) {
   case EEP_24Cxx_TYP:
 
@@ -262,7 +272,6 @@ uint16_t i2c_read(uint8_t basis, uint8_t chipID, uint16_t cmd, uint8_t typ) {
   case PCF8574A_TYP:
     wert = i2c_receive(0);
     break;
-
   case PCF8575TS_TYP:              // 16Bit Modul
     i2c_start();                   // Start condition
     i2c_send(basisAddr | TW_READ); // Adresse + Read (1)
