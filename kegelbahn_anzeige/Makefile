@@ -8,6 +8,7 @@ port ?= /dev/ttyUSB0
 i ?= $(wildcard $(SRC_DIR)/*.c)
 # Defines, F_CPU used for util/delay.h
 D ?= F_CPU=16000000UL
+baud = 115200
 
 OBJS = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(i))
 
@@ -25,7 +26,7 @@ build: $(OBJS)
 	avr-objcopy -O ihex -R .eeprom $(BUILD_DIR)/compiled.bin $(BUILD_DIR)/compiled.hex
 
 upload:
-	avrdude -c arduino -p ATMEGA328P -P $(port) -b 115200 -U flash:w:$(BUILD_DIR)/compiled.hex
+	avrdude -c arduino -p ATMEGA328P -P $(port) -b $(baud) -U flash:w:$(BUILD_DIR)/compiled.hex
 
 size: build
 	avr-size --format=avr --mcu=atmega328p $(BUILD_DIR)/compiled.bin
