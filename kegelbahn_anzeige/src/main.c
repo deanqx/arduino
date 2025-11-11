@@ -10,15 +10,22 @@ static const uint8_t number_map[] = {0xBF, 0x06, 0x5B, 0x4F, 0x66,
                                      0x6D, 0xFD, 0x07, 0x7F, 0x6F};
 
 void turn_off_all_digits(void) {
-  for (int8_t digit = 6; digit >= 1; digit--) {
+  for (int8_t digit = 1; digit <= 6; digit++) {
     i2c_write(PCF8574A_ADR, digit, 0, 0x00, PCF8574A_TYP);
   }
 }
 
+/* Zeige eine Zahlenstelle an
+ * @param digit Stelle (1: Einer, 6: Hunderttausender)
+ * @param number Zahl (0 bis 9)
+ */
 void display_digit(const uint8_t digit, const uint8_t number) {
   i2c_write(PCF8574A_ADR, digit, 0, number_map[number], PCF8574A_TYP);
 }
 
+/* Zeige Zahl an
+ * @param number Zahl (0 bis 999_999)
+ */
 void display_number(uint32_t number) {
   // Einerstelle anzeigen
   static const uint8_t first_digit = 1;
