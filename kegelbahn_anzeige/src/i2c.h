@@ -18,9 +18,10 @@
 #include <avr/io.h>
 #include <stdint.h>
 #include <util/delay.h>
+#include <util/twi.h>
 
 #define i2c_baud 100000UL // TWI Baudrate 100kHz
-#define TWI_Diskret 1     // 0 = TWI_intern 1 = TWI_Diskret
+#define TWI_Diskret 0     // 0 = TWI_intern 1 = TWI_Diskret
 
 // I2C Bausteine:
 #define PCF8574_TYP 0   // Adresse: 0x40
