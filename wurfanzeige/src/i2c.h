@@ -115,7 +115,15 @@ uint8_t ACK(void) // ACK abfragen
   else
     return 1;
 #else
+  /* Wait for TWINT flag to set */
+  while (!(TWCR & (1 << TWINT)))
+    ;
 
+  if (TW_STATUS != TW_MT_DATA_ACK) {
+    return TW_STATUS;
+  }
+
+  return 1;
 #endif
 }
 
@@ -161,8 +169,8 @@ uint8_t i2c_send(uint8_t DataByte) {
   TWDR = DataByte;               // write Databyte
   TWCR = _BV(TWINT) | _BV(TWEN); // clear interrupt to start transmission
   while ((TWCR & _BV(TWINT)) == 0)
-    ;       // wait for transmission
-  return 1; // ACK erfolgreich
+    ;           // wait for transmission
+  return ACK(); // ACK erfolgreich
 #endif
 }
 

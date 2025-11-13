@@ -15,12 +15,6 @@ void init_mcp23016(void) {
   // sende i2c manuell da der angesteuerte I2C IC (MCP23016) 16 bit hat
   i2c_start();
   i2c_send(ADDR);
-  i2c_send(ICON0);
-  i2c_send(0x01); // high speed Reaktionszeit benutzen
-  i2c_stop();
-
-  i2c_start();
-  i2c_send(ADDR);
   i2c_send(IODIR0);
   i2c_send(0x00); // Alle IO Pins auf Ausgabe
   i2c_send(0x00);
