@@ -1,3 +1,5 @@
+Experiments and homework with the Arduino R3 (ATmega328) and other AVR Microcontrollers.
+
 # Arduino IDE
 
 ## Creating new sketch
@@ -17,7 +19,21 @@ Adjust the `/dev/ttyUSB0` with your USB port.
 arduino-cli compile . -u -p /dev/ttyUSB0
 ```
 
-# AVR
+# AVR with CMake
+
+## Prepare
+
+```
+cmake -B build
+```
+
+## Compile and upload
+
+```
+cmake --build build
+```
+
+# AVR with make
 
 ## Install required packages
 
