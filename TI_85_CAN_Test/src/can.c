@@ -6,6 +6,7 @@
  * Author: deanqx
  */
 
+#include "hal.h"
 #include <avr/io.h>
 #include <stdint.h>
 
@@ -23,6 +24,9 @@ static void spi_init_master(void) {
   SPCR = 1 << SPE | 1 << MSTR | 1 << SPR0;
 }
 
+static void spi_enable(void) { hal_io_set(PORT_SPI, SS, 0); }
+static void spi_disable(void) { hal_io_set(PORT_SPI, SS, 1); }
+
 static void spi_tx(const char data) {
   // Start transmission
   SPDR = data;
@@ -35,4 +39,9 @@ static void spi_tx(const char data) {
 void can_init(void) {
   spi_init_master();
   spi_tx(RESET);
+  spi_disable();
+
+  spi_enable();
+  spi_tx(0x55);
+  spi_disable();
 }
