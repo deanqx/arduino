@@ -3,6 +3,8 @@
 
 MCP2515 mcp2515(10);
 
+static const uint8_t LED = 5;
+
 static const uint16_t ID_DEAN = 0x200;
 static const uint16_t ID_TAMMO = 0x400;
 static const uint8_t ID_BLINK_16 = 0x00;
@@ -58,7 +60,7 @@ void send_commands(void)
 }
 
 void setup() {
-  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(LED, OUTPUT);
   
   while (!Serial);
   Serial.begin(9600);
@@ -81,39 +83,42 @@ void setup() {
     Serial.println("Befehl erhalten: ");
     print_can_frame(&received_command);
 
-    if (received_command.can_id & 0xF00 != ID_DEAN)
+    if (((uint16_t) (received_command.can_id) & 0xF00) != ID_DEAN)
     {
       continue;
     }
 
-    switch ((uint8_t) received_command.can_id)
+    switch ((uint8_t) (received_command.can_id & 0xFF))
     {
       case ID_BLINK_5:
+        Serial.println("blink 5 mal");
         for (uint8_t i = 0; i < 5; i++)
         {
-          digitalWrite(LED_BUILTIN, HIGH);
+          digitalWrite(LED, HIGH);
           delay(200);
-          digitalWrite(LED_BUILTIN, LOW);
+          digitalWrite(LED, LOW);
           delay(200);
         }
         break;
       case ID_BLINK_10:
+        Serial.println("blink 10 mal");
         for (uint8_t i = 0; i < 10; i++)
         {
-          digitalWrite(LED_BUILTIN, HIGH);
+          digitalWrite(LED, HIGH);
           delay(200);
-          digitalWrite(LED_BUILTIN, LOW);
+          digitalWrite(LED, LOW);
           delay(200);
         }
         break;
       case ID_BLINK_16:
         if (received_command.can_dlc == 1 && received_command.data[0] == 0x0C)
         {
+          Serial.println("blink 16 mal");
           for (uint8_t i = 0; i < 16; i++)
           {
-            digitalWrite(LED_BUILTIN, HIGH);
+            digitalWrite(LED, HIGH);
             delay(200);
-            digitalWrite(LED_BUILTIN, LOW);
+            digitalWrite(LED, LOW);
             delay(200);
           }
         }
