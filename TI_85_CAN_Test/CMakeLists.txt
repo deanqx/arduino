@@ -5,10 +5,10 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(MCU atmega328p)
+set(MCU atmega2560)
 set(F_CPU 16000000UL)          
-set(PROGRAMMER arduino)
-set(PORT /dev/ttyUSB0)
+set(PROGRAMMER wiring)
+set(PORT /dev/ttyUSB0 CACHE STRING "Port of programmer")
 
 # Generic: no OS
 set(CMAKE_SYSTEM_NAME Generic)
@@ -24,7 +24,12 @@ add_executable(${PROJECT_NAME}.elf
 )
 
 add_subdirectory(libs/usart)
-target_link_libraries(${PROJECT_NAME}.elf PRIVATE usart)
+add_subdirectory(libs/can)
+target_link_libraries(${PROJECT_NAME}.elf
+    PRIVATE
+    usart
+    can
+)
 
 # convert ELF to IHEX
 add_custom_command(
@@ -40,5 +45,6 @@ add_custom_target(hex
 add_custom_target(upload
     ALL
     DEPENDS hex
-    COMMAND avrdude -p ${MCU} -P ${PORT} -c ${PROGRAMMER} -U flash:w:${PROJECT_NAME}.hex
+    COMMAND avrdude -p atmega328p -P ${PORT} -c arduino -U flash:w:${PROJECT_NAME}.hex
+# COMMAND avrdude -p ${MCU} -D -P ${PORT} -c ${PROGRAMMER} -U flash:w:${PROJECT_NAME}.hex
 )
