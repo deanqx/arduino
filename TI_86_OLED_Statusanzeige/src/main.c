@@ -1,104 +1,158 @@
-#include "i2c.h"
-#include "usart.h"
-#include <util/delay.h>
+#include "can.h"
+#include <avr/io.h>
+#include <avr/pgmspace.h>
+#include <stdint.h>
 
-#ifndef OLED_ADDRESS
-#define OLED_ADDRESS 0x78
-#endif
-
-/* If the Co bit is set as logic “0”,
- * the transmission of the following
- * information will contain data bytes only.
+// -----------------------------------------------------------------------------
+/** Set filters and masks.
+ *
+ * The filters are divided in two groups:
+ *
+ * Group 0: Filter 0 and 1 with corresponding mask 0.
+ * Group 1: Filter 2, 3, 4 and 5 with corresponding mask 1.
+ *
+ * If a group mask is set to 0, the group will receive all messages.
+ *
+ * If you want to receive ONLY 11 bit identifiers, set your filters
+ * and masks as follows:
+ *
+ *	uint8_t can_filter[] PROGMEM = {
+ *		// Group 0
+ *		MCP2515_FILTER(0),				// Filter 0
+ *		MCP2515_FILTER(0),				// Filter 1
+ *
+ *		// Group 1
+ *		MCP2515_FILTER(0),				// Filter 2
+ *		MCP2515_FILTER(0),				// Filter 3
+ *		MCP2515_FILTER(0),				// Filter 4
+ *		MCP2515_FILTER(0),				// Filter 5
+ *
+ *		MCP2515_FILTER(0),				// Mask 0 (for
+ *group 0) MCP2515_FILTER(0),				// Mask 1 (for group 1)
+ *	};
+ *
+ *
+ * If you want to receive ONLY 29 bit identifiers, set your filters
+ * and masks as follows:
+ *
+ * \code
+ *	uint8_t can_filter[] PROGMEM = {
+ *		// Group 0
+ *		MCP2515_FILTER_EXTENDED(0),		// Filter 0
+ *		MCP2515_FILTER_EXTENDED(0),		// Filter 1
+ *
+ *		// Group 1
+ *		MCP2515_FILTER_EXTENDED(0),		// Filter 2
+ *		MCP2515_FILTER_EXTENDED(0),		// Filter 3
+ *		MCP2515_FILTER_EXTENDED(0),		// Filter 4
+ *		MCP2515_FILTER_EXTENDED(0),		// Filter 5
+ *
+ *		MCP2515_FILTER_EXTENDED(0),		// Mask 0 (for group 0)
+ *		MCP2515_FILTER_EXTENDED(0),		// Mask 1 (for group 1)
+ *	};
+ * \endcode
+ *
+ * If you want to receive both 11 and 29 bit identifiers, set your filters
+ * and masks as follows:
  */
-static const uint8_t OLED_CONTINUATION_BIT_L = 7;
-/*
- * The D/C# bit determines the next data byte
- * is acted as a command or a data.
- * If the D/C# bit is set to logic “0”,
- * it defines the following data byte as a command.
- */
-static const uint8_t OLED_DATA_SELECTION_BIT = 6;
+const uint8_t can_filter[] PROGMEM = {
+    // Group 0
+    MCP2515_FILTER(0), // Filter 0
+    MCP2515_FILTER(0), // Filter 1
 
-static const uint8_t OLED_SET_CONTRAST = 0x81;
-static const uint8_t OLED_ENTIRE_DISPLAY_ON = 0xA4;
-static const uint8_t OLED_SET_DISPLAY_OFF = 0xAE;
-static const uint8_t OLED_SET_DISPLAY_ON = 0xAF;
+    // Group 1
+    MCP2515_FILTER(0), // Filter 2
+    MCP2515_FILTER(0), // Filter 3
+    MCP2515_FILTER(0), // Filter 4
+    MCP2515_FILTER(0), // Filter 5
 
-static const uint8_t OLED_SET_MUX = 0xA8;
-static const uint8_t OLED_SET_DISPLAY_OFFSET = 0xD3;
-static const uint8_t OLED_SET_DISPLAY_START_LINE = 0x40;
-static const uint8_t OLED_SET_CHARGE_PUMP = 0x8D;
-static const uint8_t OLED_ENABLE_CHARGE_PUMP = 0x14;
-static const uint8_t OLED_SET_OSC_FREQ = 0xD5;
-static const uint8_t OLED_SET_COM_PINS = 0xDA;
-static const uint8_t OLED_SCROLL_DEACTIVATE = 0x2E;
+    MCP2515_FILTER(0), // Mask 0 (for group 0)
+    MCP2515_FILTER(0), // Mask 1 (for group 1)
+};
+// You can receive 11 bit identifiers with either group 0 or 1.
+
+// -----------------------------------------------------------------------------
+// Main loop for receiving and sending messages.
+
+// analog to digital converter init
+void adc_init(void) {
+  // use AREF, use ADC0
+  ADMUX = ADC0D;
+  // enable ADC, no prescaling
+  ADCSRA = 1 << ADEN;
+}
+
+// read synchronus analog to digital converter pin
+uint16_t adc_read_sync(void) {
+  // start conversion
+  ADCSRA |= 1 << ADSC;
+
+  // wait for ADC
+  while (ADCSRA >> ADSC & 1)
+    ;
+
+  return ADCH << 8 | ADCL;
+}
+
+// init pwm
+void pwm_init(void) {
+  // use timer0, oggle OC0A on compare match, fast PWM
+  TCCR0A = 1 << COM0A0 | 1 << WGM01 | 1 << WGM00;
+  // FCPU without prescaling
+  TCCR0B = 1 << WGM02 | 1 << CS00;
+}
+
+void pwm_set(uint8_t compare) { OCR0B = compare; }
 
 int main(void) {
-  uart0_init(BAUD_CALC(9600));
-  uart0_puts("hello\r\n");
+  adc_init();
+  pwm_init();
 
-  i2c_init();
+  const uint16_t brightness = adc_read_sync();
 
-  /*
-     # Example from the datasheet
+  // pwm_set(brightness >> 2);
+  pwm_set(200);
 
-     Set MUX Ratio A8h, 3Fh
-     Set Display Offset D3h, 00h
-     Set Display Start Line 40h
-     Set Segment re-map A0h/A1h
-     Set COM Output Scan Direction C0h/C8h
-     Set COM Pins hardware configuration DAh, 02
-     Set Contrast Control 81h, 7Fh
-     Disable Entire Display On A4h
-     Set Normal Display A6h
-     Set Osc Frequency D5h, 80h
-     Enable charge pump regulator 8Dh, 14h
-     Display On AFh
-   */
+  while (1)
+    ;
 
-  i2c_start();
-  i2c_send(OLED_ADDRESS);
-  i2c_send(0 << OLED_CONTINUATION_BIT_L | 0 << OLED_DATA_SELECTION_BIT);
+  // Initialize MCP2515
+  can_init(BITRATE_250_KBPS);
 
-  i2c_send(OLED_SET_DISPLAY_OFF);
+  // Load filters and masks
+  can_static_filter(can_filter);
 
-  i2c_send(OLED_SET_MUX);
-  i2c_send(63);
+  // Create a test messsage
+  can_t msg;
 
-  i2c_send(OLED_SET_DISPLAY_OFFSET);
-  i2c_send(0x00);
+  msg.id = 0x400;
+  msg.flags.rtr = 0;
+  // msg.flags.extended = 1;
 
-  i2c_send(OLED_SET_DISPLAY_START_LINE);
+  msg.length = 4;
+  msg.data[0] = 0xde;
+  msg.data[1] = 0xad;
+  msg.data[2] = 0xbe;
+  msg.data[3] = 0xef;
 
-  i2c_send(OLED_SET_COM_PINS);
-  i2c_send(0x12);
-
-  i2c_send(OLED_SET_CONTRAST);
-  i2c_send(127);
-
-  i2c_send(OLED_ENTIRE_DISPLAY_ON);
-
-  i2c_send(OLED_SET_OSC_FREQ);
-  i2c_send(0xF0);
-
-  i2c_send(OLED_SET_CHARGE_PUMP);
-  i2c_send(OLED_ENABLE_CHARGE_PUMP);
-
-  i2c_send(OLED_SCROLL_DEACTIVATE);
-
-  i2c_send(OLED_SET_DISPLAY_ON);
-  i2c_stop();
-
-  uart0_puts("reached\r\n");
-
-  i2c_start();
-  i2c_send(OLED_ADDRESS);
-  i2c_send(0 << OLED_CONTINUATION_BIT_L | 1 << OLED_DATA_SELECTION_BIT);
-  while (1) {
-    i2c_send(0xFF);
-  }
-  i2c_stop();
+  // Send the message
+  can_send_message(&msg);
 
   while (1) {
+    // Check if a new messag was received
+    if (can_check_message()) {
+      can_t msg;
+
+      // Try to read the message
+      if (can_get_message(&msg)) {
+        // If we received a message resend it with a different id
+        msg.id += 10;
+
+        // Send the new message
+        can_send_message(&msg);
+      }
+    }
   }
+
+  return 0;
 }
