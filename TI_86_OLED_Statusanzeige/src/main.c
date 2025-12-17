@@ -1,4 +1,5 @@
 #include "can.h"
+#include "lcd.h"
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <stdint.h>
@@ -104,7 +105,24 @@ void pwm_init(void) {
 
 void pwm_set(uint8_t compare) { OCR0B = compare; }
 
+void test_lcd(void) {
+  lcd_init(LCD_DISP_ON);
+
+  lcd_puts("Hello World");
+  lcd_gotoxy(0, 1);
+  lcd_puts("iiiiiiiiiiii");
+  lcd_gotoxy(0, 2);
+  lcd_puts("MMMMMMMMMMMM");
+  lcd_gotoxy(0, 3);
+  lcd_puts_p(PSTR("String from flash"));
+
+  while (1) {
+  }
+}
+
 int main(void) {
+  test_lcd();
+
   adc_init();
   pwm_init();
 

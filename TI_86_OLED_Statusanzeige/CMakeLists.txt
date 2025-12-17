@@ -19,18 +19,12 @@ add_definitions(-DF_CPU=${F_CPU})
 set(CMAKE_C_FLAGS "-mmcu=${MCU} -Os")
 set(CMAKE_EXE_LINKER_FLAGS "-mmcu=${MCU}")
 
-#add_executable(${PROJECT_NAME}.elf
-#    example/Demo.c
-#    example/SSD1306.c
-#    example/TWI.c
-#)
 add_executable(${PROJECT_NAME}.elf
     src/main.c
 )
 
-add_subdirectory(libs/usart)
-add_subdirectory(libs/can)
-target_link_libraries(${PROJECT_NAME}.elf PRIVATE usart can)
+add_subdirectory(libs)
+target_link_libraries(${PROJECT_NAME}.elf PRIVATE usart can oled-display)
 
 # convert ELF to IHEX
 add_custom_command(
