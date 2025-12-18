@@ -1,5 +1,6 @@
 #include "can.h"
 #include "lcd.h"
+#include "usart.h"
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <stdint.h>
@@ -81,6 +82,8 @@ void adc_init(void) {
   ADMUX = ADC0D;
   // enable ADC, no prescaling
   ADCSRA = 1 << ADEN;
+  // disable digital input at pin ADC0
+  DIDR0 = ADC0D;
 }
 
 // read synchronus analog to digital converter pin
@@ -97,17 +100,15 @@ uint16_t adc_read_sync(void) {
 
 // init pwm
 void pwm_init(void) {
-  // use timer0, oggle OC0A on compare match, fast PWM
+  // use timer0, toggle OC0A (PD6) on compare match, fast PWM
   TCCR0A = 1 << COM0A0 | 1 << WGM01 | 1 << WGM00;
   // FCPU without prescaling
   TCCR0B = 1 << WGM02 | 1 << CS00;
 }
 
-void pwm_set(uint8_t compare) { OCR0B = compare; }
+void pwm_set(uint8_t compare) { OCR0A = compare; }
 
 void test_lcd(void) {
-  lcd_init(LCD_DISP_ON);
-
   lcd_puts("Hello World");
   lcd_gotoxy(0, 1);
   lcd_puts("iiiiiiiiiiii");
@@ -121,18 +122,26 @@ void test_lcd(void) {
 }
 
 int main(void) {
-  test_lcd();
-
+  uart0_init(BAUD_CALC(9600UL));
+  lcd_init(LCD_DISP_ON);
   adc_init();
   pwm_init();
 
+  uart0_puts("TI_86_OLED_Statusanzeige\r\n");
+
+  // test_lcd();
+
   const uint16_t brightness = adc_read_sync();
+  uart0_putint(brightness);
+
+  while (1) {
+  }
 
   // pwm_set(brightness >> 2);
   pwm_set(200);
 
-  while (1)
-    ;
+  // while (1)
+  //   ;
 
   // Initialize MCP2515
   can_init(BITRATE_250_KBPS);
@@ -163,11 +172,7 @@ int main(void) {
 
       // Try to read the message
       if (can_get_message(&msg)) {
-        // If we received a message resend it with a different id
-        msg.id += 10;
-
-        // Send the new message
-        can_send_message(&msg);
+        uart0_puts("received something\r\n");
       }
     }
   }
