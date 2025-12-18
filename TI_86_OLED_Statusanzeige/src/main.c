@@ -101,13 +101,14 @@ uint16_t adc_read_sync(void) {
 
 // init pwm
 void pwm_init(void) {
-  // use timer0, toggle OC0A (PD6) on compare match, fast PWM
-  TCCR0A = 1 << COM0A0 | 1 << WGM01 | 1 << WGM00;
+  // use timer0, Clear OC0A (PD6) on compare match, set OC0A at BOTTOM,
+  // (non-inverting mode), fast PWM
+  TCCR0A = 1 << COM0A1 | 1 << WGM01 | 1 << WGM00;
   // FCPU without prescaling
-  TCCR0B = 1 << WGM02 | 1 << CS00;
+  TCCR0B = 1 << CS00;
 }
 
-void pwm_set(uint8_t compare) { OCR0A = compare; }
+void pwm_set(uint8_t numerator) { OCR0A = numerator; }
 
 void test_lcd(void) {
   lcd_puts("Hello World");
@@ -129,21 +130,19 @@ int main(void) {
   pwm_init();
 
   DDRD &= ~(1 << ADC0D);
+  DDRD |= 1 << PD6;
 
   uart0_puts("TI_86_OLED_Statusanzeige\r\n");
 
   while (1) {
-    const uint16_t brightness = adc_read_sync();
+    const uint8_t brightness = adc_read_sync() >> 2;
+
+    uart0_puts("Brightness: ");
     uart0_putuint(brightness);
     uart0_puts("\r\n");
-    _delay_ms(500);
+
+    pwm_set(brightness);
   }
-
-  // pwm_set(brightness >> 2);
-  pwm_set(200);
-
-  // while (1)
-  //   ;
 
   // Initialize MCP2515
   can_init(BITRATE_250_KBPS);
