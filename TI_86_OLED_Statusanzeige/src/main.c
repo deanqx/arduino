@@ -4,6 +4,7 @@
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <stdint.h>
+#include <util/delay.h>
 
 // -----------------------------------------------------------------------------
 /** Set filters and masks.
@@ -77,11 +78,11 @@ const uint8_t can_filter[] PROGMEM = {
 // Main loop for receiving and sending messages.
 
 // analog to digital converter init
-void adc_init(void) {
-  // use AREF, use ADC0
-  ADMUX = ADC0D;
-  // enable ADC, no prescaling
-  ADCSRA = 1 << ADEN;
+void adc_init(const uint8_t adc_pin) {
+  // use Vcc as reference voltage, use ADC0
+  ADMUX = 1 << REFS0 | adc_pin;
+  // enable ADC, F_CPU/128 prescaling so average can be measured
+  ADCSRA = 1 << ADEN | 1 << ADPS2 | 1 << ADPS1 | 1 << ADPS0;
   // disable digital input at pin ADC0
   DIDR0 = ADC0D;
 }
@@ -95,7 +96,7 @@ uint16_t adc_read_sync(void) {
   while (ADCSRA >> ADSC & 1)
     ;
 
-  return ADCH << 8 | ADCL;
+  return ADCL | ADCH << 8;
 }
 
 // init pwm
@@ -124,17 +125,18 @@ void test_lcd(void) {
 int main(void) {
   uart0_init(BAUD_CALC(9600UL));
   lcd_init(LCD_DISP_ON);
-  adc_init();
+  adc_init(ADC0D);
   pwm_init();
+
+  DDRD &= ~(1 << ADC0D);
 
   uart0_puts("TI_86_OLED_Statusanzeige\r\n");
 
-  // test_lcd();
-
-  const uint16_t brightness = adc_read_sync();
-  uart0_putint(brightness);
-
   while (1) {
+    const uint16_t brightness = adc_read_sync();
+    uart0_putuint(brightness);
+    uart0_puts("\r\n");
+    _delay_ms(500);
   }
 
   // pwm_set(brightness >> 2);

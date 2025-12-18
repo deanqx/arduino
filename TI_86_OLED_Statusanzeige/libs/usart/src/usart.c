@@ -6,6 +6,7 @@
  */
 
 #include <avr/io.h>
+#include <stdint.h>
 #include <util/delay.h>
 #include <util/atomic.h>
 #include <avr/pgmspace.h>
@@ -312,10 +313,10 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart0_putc(char data)
 	{
-		register uint8_t tmp_tx_Head asm("r25");
+		register uint8_t tmp_tx_Head __asm__("r25");
 		
 	#ifdef PUTC0_CONVERT_LF_TO_CRLF
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"cpi %[dat], '\n' \n\t"
 			"brne skip_recursive_%=\n\t"
 			"push %[dat] \n\t"
@@ -332,7 +333,7 @@
 		
 	#ifdef USART0_PUTC_FAST_INSERTIONS
 		
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"lds %[head], (tx0_Head) \n\t"
 			
 		#ifdef USART0_USE_SOFT_CTS
@@ -392,7 +393,7 @@
 			"r26","r27"
 		);
 	#else
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"lds %[head], (tx0_Head) \n\t"
 			"inc %[head] \n\t"
 			
@@ -414,7 +415,7 @@
 		);
 	#endif
 		
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"mov r26, %[index]  \n\t"
 		
 		#if !defined(__AVR_ATtiny2313__)&&!defined(__AVR_ATtiny2313A__) // on ATtiny2313 upper byte in pointer pair is ignored
@@ -450,7 +451,7 @@
 			#ifdef USART0_IN_IO_ADDRESS_SPACE
 				UCSR0B_REGISTER |= (1<<UDRIE0_BIT); // enable UDRE interrupt
 			#else
-				asm volatile("\n\t"
+				__asm__ volatile("\n\t"
 				#ifdef USART0_IN_UPPER_IO_ADDRESS_SPACE
 					"in r25, %M[control_reg_IO] \n\t"
 					"ori r25, (1<<%M[udrie_bit]) \n\t"
@@ -472,7 +473,7 @@
 		}
 	
 		reti();
-		asm volatile("\n\t"::"r" (data):); // data was passed in r24 and will be returned in the same register, make sure it is not affected by the compiler 
+		__asm__ volatile("\n\t"::"r" (data):); // data was passed in r24 and will be returned in the same register, make sure it is not affected by the compiler 
 	}
 	
 	char uart0_putc_(char data) __attribute__ ((alias ("uart0_putc"))); // alias for uart_putc that returns passed argument unaffected by omitting any existent rule
@@ -557,7 +558,7 @@
 			return BUFFER_FULL;
 	#endif
 	
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"mov r26, %[index]  \n\t"
 		
 		#if !defined(__AVR_ATtiny2313__)&&!defined(__AVR_ATtiny2313A__) // on ATtiny2313 upper byte in pointer pair is ignored
@@ -615,7 +616,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart0_putstr(char *string)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		"load_loop_%=:"
 			"ld r24, Z+ \n\t"
@@ -650,7 +651,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart0_putstrl(char *string, uint8_t BytesToWrite)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"add %[counter], r30 \n\t" // add ZL to a counter to compare against current pointer (8 bit length, doesn't care if overflow)
 		"load_loop_%=:"
 			"cp %[counter], r30\n\t"
@@ -677,7 +678,7 @@
 //Return    : none
 //******************************************************************
 #ifdef USART_NO_ABI_BREAKING_PREMATURES
-	void uart0_puts_p(const __flash char *string)
+	void uart0_puts_p(const char __flash *string)
 	{
 	#ifndef USART0_NOT_ACCESIBLE_FROM_CBI // tiny 102/104
 		register char c;
@@ -685,10 +686,10 @@
 	#endif
 	}
 #else // !USART_NO_ABI_BREAKING_PREMATURES
-	void uart0_puts_p(const __flash char *string)
+	void uart0_puts_p(const char __flash *string)
 	{
 	#if !defined(__AVR_ATtiny102__)||!defined(__AVR_ATtiny104__)
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		"load_loop_%=:"
 			"lpm r24, Z+ \n\t"
@@ -722,6 +723,7 @@
 	
 		itoa(data, u_tmp_buff, 10);
 		uart0_putstr(u_tmp_buff);
+		__asm__ volatile("nop");
 	}
 	
 //******************************************************************
@@ -738,6 +740,7 @@
 		
 		itoa(data, u_tmp_buff, radix);
 		uart0_putstr(u_tmp_buff);
+		__asm__ volatile("nop");
 	}
 	
 //******************************************************************
@@ -753,6 +756,7 @@
 	
 		utoa(data, u_tmp_buff, 10);
 		uart0_putstr(u_tmp_buff);
+		__asm__ volatile("nop");
 	}
 	
 //******************************************************************
@@ -768,6 +772,7 @@
 	#endif
 		utoa(data, u_tmp_buff, radix);
 		uart0_putstr(u_tmp_buff);
+		__asm__ volatile("nop");
 	}
 
 //******************************************************************
@@ -807,6 +812,7 @@
 		
 		ltoa(data, u_tmp_buff, 10);
 		uart0_putstr(u_tmp_buff);
+		__asm__ volatile("nop");
 	}
 	
 //******************************************************************
@@ -823,6 +829,7 @@
 		
 		ltoa(data, u_tmp_buff, radix);
 		uart0_putstr(u_tmp_buff);
+		__asm__ volatile("nop");
 	}
 	
 //******************************************************************
@@ -838,6 +845,7 @@
 		
 		ultoa(data, u_tmp_buff, 10);
 		uart0_putstr(u_tmp_buff);
+		__asm__ volatile("nop");
 	}
 	
 //******************************************************************
@@ -854,6 +862,7 @@
 		
 		ultoa(data, u_tmp_buff, radix);
 		uart0_putstr(u_tmp_buff);
+		__asm__ volatile("nop");
 	}
 
 //******************************************************************
@@ -874,6 +883,7 @@
 			p++;
 		
 		uart0_putstr(p);
+		__asm__ volatile("nop");
 	}
 
 //******************************************************************
@@ -895,6 +905,7 @@
 			p++;
 		
 		uart0_putstr(p);
+		__asm__ volatile("nop");
 	}
 	
 //******************************************************************
@@ -994,10 +1005,10 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart1_putc(char data)
 	{
-		register uint8_t tmp_tx_Head asm("r25");
+		register uint8_t tmp_tx_Head __asm__("r25");
 		
 	#ifdef PUTC1_CONVERT_LF_TO_CRLF
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"cpi %[dat], '\n' \n\t"
 			"brne skip_recursive_%=\n\t"
 			"push %[dat] \n\t"
@@ -1014,7 +1025,7 @@
 		
 	#ifdef USART1_PUTC_FAST_INSERTIONS
 		
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"lds %[head], (tx1_Head) \n\t"
 			
 		#ifdef USART1_USE_SOFT_CTS
@@ -1071,7 +1082,7 @@
 			"r26","r27"
 		);
 	#else
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"lds %[head], (tx1_Head) \n\t"
 			"inc %[head] \n\t"
 			
@@ -1093,7 +1104,7 @@
 		);
 	#endif
 		
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"mov r26, %[index]  \n\t"
 			"ldi r27, 0x00 \n\t"
 			"subi r26, lo8(-(tx1_buffer)) \n\t"
@@ -1123,7 +1134,7 @@
 			#ifdef USART1_IN_IO_ADDRESS_SPACE
 				UCSR1B_REGISTER |= (1<<UDRIE1_BIT); // enable UDRE interrupt
 			#else
-				asm volatile("\n\t"
+				__asm__ volatile("\n\t"
 					"lds r25, %M[control_reg] \n\t"
 					"ori r25, (1<<%M[udrie_bit]) \n\t"
 					"sts %M[control_reg], r25 \n\t"
@@ -1140,7 +1151,7 @@
 	
 		reti();
 		
-		asm volatile("\n\t"::"r" (data):); // data was passed in r24 and will be returned in the same register, make sure it is not affected by the compiler 
+		__asm__ volatile("\n\t"::"r" (data):); // data was passed in r24 and will be returned in the same register, make sure it is not affected by the compiler 
 	}
 	
 	char uart1_putc_(char data) __attribute__ ((alias ("uart1_putc"))); // alias for uart_putc that returns passed argument unaffected by omitting any existent rule
@@ -1219,7 +1230,7 @@
 			return BUFFER_FULL;
 	#endif
 	
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"mov r26, %[index]  \n\t"
 			"ldi r27, 0x00 \n\t"
 			"subi r26, lo8(-(tx1_buffer)) \n\t"
@@ -1262,7 +1273,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart1_putstr(char *string)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		"load_loop_%=:"
 			"ld r24, Z+ \n\t"
@@ -1291,7 +1302,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart1_putstrl(char *string, uint8_t BytesToWrite)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"add %[counter], r30 \n\t" // add ZL to a counter to compare against current pointer (8 bit length, doesn't care if overflow)
 		"load_loop_%=:"
 			"cp %[counter], r30\n\t"
@@ -1313,15 +1324,15 @@
 #endif // USART_NO_ABI_BREAKING_PREMATURES
 
 #ifdef USART_NO_ABI_BREAKING_PREMATURES
-	void uart1_puts_p(const __flash char *string)
+	void uart1_puts_p(const char __flash *string)
 	{
 		register char c;
 		while ( (c = *string++) ) uart1_putc(c); 
 	}
 #else // !USART_NO_ABI_BREAKING_PREMATURES
-	void uart1_puts_p(const __flash char *string)
+	void uart1_puts_p(const char __flash *string)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		"load_loop_%=:"
 			"lpm r24, Z+ \n\t"
@@ -1546,10 +1557,10 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart2_putc(char data)
 	{
-		register uint8_t tmp_tx_Head asm("r25");
+		register uint8_t tmp_tx_Head __asm__("r25");
 		
 	#ifdef PUTC2_CONVERT_LF_TO_CRLF
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"cpi %[dat], '\n' \n\t"
 			"brne skip_recursive_%=\n\t"
 			"push %[dat] \n\t"
@@ -1566,7 +1577,7 @@
 		
 	#ifdef USART2_PUTC_FAST_INSERTIONS
 			
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"lds %[head], (tx2_Head) \n\t"
 			
 		#ifdef USART2_USE_SOFT_CTS
@@ -1615,7 +1626,7 @@
 			"r26","r27"
 		);
 	#else
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"lds %[head], (tx2_Head) \n\t"
 			"inc %[head] \n\t"
 			
@@ -1637,7 +1648,7 @@
 		);
 	#endif
 		
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"mov r26, %[index]  \n\t"
 			"ldi r27, 0x00 \n\t"
 			"subi r26, lo8(-(tx2_buffer)) \n\t"
@@ -1664,7 +1675,7 @@
 			if(!(CTS2_PIN & (1<<CTS2_IONUM)))
 		#endif
 			{
-				asm volatile("\n\t"
+				__asm__ volatile("\n\t"
 					"lds r25, %M[control_reg] \n\t"
 					"ori r25, (1<<%M[udrie_bit]) \n\t"
 					"sts %M[control_reg], r25 \n\t"
@@ -1679,7 +1690,7 @@
 		}
 	
 		reti();
-		asm volatile("\n\t"::"r" (data):); // data was passed in r24 and will be returned in the same register, make sure it is not affected by the compiler 
+		__asm__ volatile("\n\t"::"r" (data):); // data was passed in r24 and will be returned in the same register, make sure it is not affected by the compiler 
 	}
 	
 	char uart2_putc_(char data) __attribute__ ((alias ("uart2_putc"))); // alias for uart_putc that returns passed argument unaffected by omitting any existent rule
@@ -1758,7 +1769,7 @@
 			return BUFFER_FULL;
 	#endif
 	
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"mov r26, %[index]  \n\t"
 			"ldi r27, 0x00 \n\t"
 			"subi r26, lo8(-(tx2_buffer)) \n\t"
@@ -1801,7 +1812,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart2_putstr(char *string)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			
 		"load_loop_%=:"
 			"ld r24, Z+ \n\t"
@@ -1830,7 +1841,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart2_putstrl(char *string, uint8_t BytesToWrite)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"add %[counter], r30 \n\t" // add ZL to a counter to compare against current pointer (8 bit length, doesn't care if overflow)
 		"load_loop_%=:"
 			"cp %[counter], r30\n\t"
@@ -1852,15 +1863,15 @@
 #endif // USART_NO_ABI_BREAKING_PREMATURES
 
 #ifdef USART_NO_ABI_BREAKING_PREMATURES
-	void uart2_puts_p(const __flash char *string)
+	void uart2_puts_p(const char __flash *string)
 	{
 		register char c;
 		while ( (c = *string++) ) uart2_putc(c);
 	}
 #else // !USART_NO_ABI_BREAKING_PREMATURES
-	void uart2_puts_p(const __flash char *string)
+	void uart2_puts_p(const char __flash *string)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		"load_loop_%=:"
 			"lpm r24, Z+ \n\t"
@@ -2085,10 +2096,10 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart3_putc(char data)
 	{
-		register uint8_t tmp_tx_Head asm("r25");
+		register uint8_t tmp_tx_Head __asm__("r25");
 		
 	#ifdef PUTC3_CONVERT_LF_TO_CRLF
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"cpi %[dat], '\n' \n\t"
 			"brne skip_recursive_%=\n\t"
 			"push %[dat] \n\t"
@@ -2105,7 +2116,7 @@
 		
 	#ifdef USART3_PUTC_FAST_INSERTIONS
 		
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"lds %[head], (tx3_Head) \n\t"
 			
 		#ifdef USART3_USE_SOFT_CTS
@@ -2154,7 +2165,7 @@
 			"r26","r27"
 		);
 	#else
-			asm volatile("\n\t"
+			__asm__ volatile("\n\t"
 				"lds %[head], (tx3_Head) \n\t"
 				"inc %[head] \n\t"
 			
@@ -2176,7 +2187,7 @@
 			);
 	#endif
 		
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"mov r26, %[index]  \n\t"
 			"ldi r27, 0x00 \n\t"
 			"subi r26, lo8(-(tx3_buffer)) \n\t"
@@ -2203,7 +2214,7 @@
 			if(!(CTS3_PIN & (1<<CTS3_IONUM)))
 		#endif
 			{
-				asm volatile("\n\t"
+				__asm__ volatile("\n\t"
 					"lds r25, %M[control_reg] \n\t"
 					"ori r25, (1<<%M[udrie_bit]) \n\t"
 					"sts %M[control_reg], r25 \n\t"
@@ -2219,7 +2230,7 @@
 	
 		reti();
 		
-		asm volatile("\n\t"::"r" (data):); // data was passed in r24 and will be returned in the same register, make sure it is not affected by the compiler 
+		__asm__ volatile("\n\t"::"r" (data):); // data was passed in r24 and will be returned in the same register, make sure it is not affected by the compiler 
 	}
 	
 	char uart3_putc_(char data) __attribute__ ((alias ("uart3_putc"))); // alias for uart_putc that returns passed argument unaffected by omitting any existent rule
@@ -2298,7 +2309,7 @@
 			return BUFFER_FULL;
 	#endif
 	
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"mov r26, %[index]  \n\t"
 			"ldi r27, 0x00 \n\t"
 			"subi r26, lo8(-(tx3_buffer)) \n\t"
@@ -2341,7 +2352,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart3_putstr(char *string)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		"load_loop_%=:"
 			"ld r24, Z+ \n\t"
@@ -2370,7 +2381,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart3_putstrl(char *string, uint8_t BytesToWrite)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"add %[counter], r30 \n\t" // add ZL to a counter to compare against current pointer (8 bit length, doesn't care if overflow)
 		"load_loop_%=:"
 			"cp %[counter], r30\n\t"
@@ -2392,15 +2403,15 @@
 #endif // USART_NO_ABI_BREAKING_PREMATURES
 
 #ifdef USART_NO_ABI_BREAKING_PREMATURES
-	void uart3_puts_p(const __flash char *string)
+	void uart3_puts_p(const char __flash *string)
 	{
 		register char c;
 		while ( (c = *string++) ) uart3_putc(c); 
 	}
 #else // !USART_NO_ABI_BREAKING_PREMATURES
-	void uart3_puts_p(const __flash char *string)
+	void uart3_puts_p(const char __flash *string)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			
 		"load_loop_%=:"
 			"lpm r24, Z+ \n\t"
@@ -2622,7 +2633,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	char uart0_getc(void)
 	{
-		register uint8_t tmp_rx_Tail asm("r25");
+		register uint8_t tmp_rx_Tail __asm__("r25");
 		char tmp;
 		
 		tmp_rx_Tail = rx0_Tail;
@@ -2632,7 +2643,7 @@
 		
 		tmp_rx_Tail = (tmp_rx_Tail+1) & RX0_BUFFER_MASK;
 	
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"mov r26, %[index] \n\t"
 		
 		#if !defined(__AVR_ATtiny2313__)&&!defined(__AVR_ATtiny2313A__) // on ATtiny2313 upper byte in pointer pair is ignored
@@ -2722,7 +2733,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart0_gets(char *buffer, uint8_t bufferlimit)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		"loop_%=:"
 			"dec %[limit] \n\t"
@@ -2782,7 +2793,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart0_getln(char *buffer, uint8_t bufferlimit)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		"loop_%=:"
 			"dec %[limit] \n\t"
@@ -2874,7 +2885,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart0_getlnToFirstWhiteSpace(char *buffer, uint8_t bufferlimit)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		"skip_whitespaces_loop_%=:"
 			"rcall uart0_getc \n\t" // counter and Z pointer will not be affected in uart0_getc()
@@ -3039,7 +3050,7 @@
 		
 		tmp_rx_Tail = (tmp_rx_Tail+1) & RX0_BUFFER_MASK;
 	
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"mov r26, %[index] \n\t"
 		
 		#if !defined(__AVR_ATtiny2313__)&&!defined(__AVR_ATtiny2313A__) // on ATtiny2313 upper byte in pointer pair is ignored
@@ -3176,7 +3187,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	char uart1_getc(void)
 	{
-		register uint8_t tmp_rx_Tail asm("r25");
+		register uint8_t tmp_rx_Tail __asm__("r25");
 		char tmp;
 		
 		tmp_rx_Tail = rx1_Tail;
@@ -3186,7 +3197,7 @@
 		
 		tmp_rx_Tail = (tmp_rx_Tail+1) & RX1_BUFFER_MASK;
 	
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"mov r26, %[index] \n\t"
 			"ldi r27, 0x00 \n\t"
 			"subi r26, lo8(-(rx1_buffer)) \n\t"
@@ -3245,7 +3256,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart1_gets(char *buffer, uint8_t bufferlimit)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		"loop_%=:"
 			"dec %[limit] \n\t"
@@ -3295,7 +3306,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart1_getln(char *buffer, uint8_t bufferlimit)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		"loop_%=:"
 			"dec %[limit] \n\t"
@@ -3377,7 +3388,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart1_getlnToFirstWhiteSpace(char *buffer, uint8_t bufferlimit)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			
 		"skip_whitespaces_loop_%=:"
 			"rcall uart1_getc \n\t" // counter and Z pointer will not be affected in uart_getc()
@@ -3502,7 +3513,7 @@
 		
 		tmp_rx_Tail = (tmp_rx_Tail+1) & RX1_BUFFER_MASK;
 	
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"mov r26, %[index] \n\t"
 			"ldi r27, 0x00 \n\t"
 			"subi r26, lo8(-(rx1_buffer)) \n\t"
@@ -3613,7 +3624,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	char uart2_getc(void)
 	{
-		register uint8_t tmp_rx_Tail asm("r25");
+		register uint8_t tmp_rx_Tail __asm__("r25");
 		char tmp;
 		
 		tmp_rx_Tail = rx2_Tail;
@@ -3623,7 +3634,7 @@
 		
 		tmp_rx_Tail = (tmp_rx_Tail+1) & RX2_BUFFER_MASK;
 	
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"mov r26, %[index] \n\t"
 			"ldi r27, 0x00 \n\t"
 			"subi r26, lo8(-(rx2_buffer)) \n\t"
@@ -3682,7 +3693,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart2_gets(char *buffer, uint8_t bufferlimit)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		"loop_%=:"
 			"dec %[limit] \n\t"
@@ -3732,7 +3743,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart2_getln(char *buffer, uint8_t bufferlimit)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			
 		"loop_%=:"
 			"dec %[limit] \n\t"
@@ -3814,7 +3825,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart2_getlnToFirstWhiteSpace(char *buffer, uint8_t bufferlimit)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			
 		"skip_whitespaces_loop_%=:"
 			"rcall uart2_getc \n\t" // counter and Z pointer will not be affected in uart_getc()
@@ -3940,7 +3951,7 @@
 		
 		tmp_rx_Tail = (tmp_rx_Tail+1) & RX2_BUFFER_MASK;
 	
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"mov r26, %[index] \n\t"
 			"ldi r27, 0x00 \n\t"
 			"subi r26, lo8(-(rx2_buffer)) \n\t"
@@ -4051,7 +4062,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	char uart3_getc(void)
 	{
-		register uint8_t tmp_rx_Tail asm("r25");
+		register uint8_t tmp_rx_Tail __asm__("r25");
 		char tmp;
 		
 		tmp_rx_Tail = rx3_Tail;
@@ -4061,7 +4072,7 @@
 		
 		tmp_rx_Tail = (tmp_rx_Tail+1) & RX3_BUFFER_MASK;
 	
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"mov r26, %[index] \n\t"
 			"ldi r27, 0x00 \n\t"
 			"subi r26, lo8(-(rx3_buffer)) \n\t"
@@ -4120,7 +4131,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart3_gets(char *buffer, uint8_t bufferlimit)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		"loop_%=:"
 			"dec %[limit] \n\t"
@@ -4170,7 +4181,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart3_getln(char *buffer, uint8_t bufferlimit)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			
 		"loop_%=:"
 			"dec %[limit] \n\t"
@@ -4252,7 +4263,7 @@
 #else // !USART_NO_ABI_BREAKING_PREMATURES
 	void uart3_getlnToFirstWhiteSpace(char *buffer, uint8_t bufferlimit)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			
 		"skip_whitespaces_loop_%=:"
 			"rcall uart3_getc \n\t" // counter and Z pointer will not be affected in uart_getc()
@@ -4377,7 +4388,7 @@
 		
 		tmp_rx_Tail = (tmp_rx_Tail+1) & RX3_BUFFER_MASK;
 	
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 			"mov r26, %[index] \n\t"
 			"ldi r27, 0x00 \n\t"
 			"subi r26, lo8(-(rx3_buffer)) \n\t"
@@ -4699,7 +4710,7 @@
 
 	ISR(UDRE0_INTERRUPT, ISR_NAKED)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		#ifndef USART_USE_GLOBALLY_RESERVED_ISR_SREG_SAVE
 			"push r16 \n\t"
@@ -4870,7 +4881,7 @@
 
 	ISR(RX0_INTERRUPT, ISR_NAKED)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 
 		#ifndef USART_USE_GLOBALLY_RESERVED_ISR_SREG_SAVE
 			"push r16 \n\t"
@@ -5111,7 +5122,7 @@
 
 	ISR(UDRE1_INTERRUPT, ISR_NAKED)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		#ifndef USART_USE_GLOBALLY_RESERVED_ISR_SREG_SAVE
 			"push r16 \n\t"
@@ -5257,7 +5268,7 @@
 	
 	ISR(RX1_INTERRUPT, ISR_NAKED)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 	
 		#ifndef USART_USE_GLOBALLY_RESERVED_ISR_SREG_SAVE
 			"push r16 \n\t"
@@ -5467,7 +5478,7 @@
 
 	ISR(UDRE2_INTERRUPT, ISR_NAKED)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 	
 		#ifndef USART_USE_GLOBALLY_RESERVED_ISR_SREG_SAVE
 			"push r16 \n\t"
@@ -5596,7 +5607,7 @@
 
 	ISR(RX2_INTERRUPT, ISR_NAKED)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		#ifndef USART_USE_GLOBALLY_RESERVED_ISR_SREG_SAVE
 			"push r16 \n\t"
@@ -5772,7 +5783,7 @@
 
 	ISR(UDRE3_INTERRUPT, ISR_NAKED)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 	
 		#ifndef USART_USE_GLOBALLY_RESERVED_ISR_SREG_SAVE
 			"push r16 \n\t"
@@ -5901,7 +5912,7 @@
 
 	ISR(RX3_INTERRUPT, ISR_NAKED)
 	{
-		asm volatile("\n\t"
+		__asm__ volatile("\n\t"
 		
 		#ifndef USART_USE_GLOBALLY_RESERVED_ISR_SREG_SAVE
 			"push r16 \n\t"
