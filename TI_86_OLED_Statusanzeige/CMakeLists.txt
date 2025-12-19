@@ -9,7 +9,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(MCU atmega328p)
 set(F_CPU 16000000UL)          
 set(PROGRAMMER arduino)
-set(PORT /dev/ttyUSB0)
+set(PORT /dev/ttyUSB0 CACHE STRING "tty port")
 
 # Generic: no OS
 set(CMAKE_SYSTEM_NAME Generic)

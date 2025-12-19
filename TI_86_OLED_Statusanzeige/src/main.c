@@ -4,6 +4,7 @@
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <util/delay.h>
 
 // -----------------------------------------------------------------------------
@@ -110,73 +111,77 @@ void pwm_init(void) {
 
 void pwm_set(uint8_t numerator) { OCR0A = numerator; }
 
-void test_lcd(void) {
-  lcd_puts("Hello World");
-  lcd_gotoxy(0, 1);
-  lcd_puts("iiiiiiiiiiii");
-  lcd_gotoxy(0, 2);
-  lcd_puts("MMMMMMMMMMMM");
-  lcd_gotoxy(0, 3);
-  lcd_puts_p(PSTR("String from flash"));
+void show_brightness_lcd(const uint8_t brightness) {
+  char brightness_str[4]; // 3 digits + \0
 
-  while (1) {
-  }
+  utoa(brightness, brightness_str, 10);
+
+  lcd_gotoxy(13, 0); // x offset of "Helligkeit: "
+  lcd_puts(brightness_str);
+}
+
+/// return FALSE falls die Nachricht nicht verschickt werden konnte,
+/// ansonsten der Code des Puffes in den die Nachricht gespeichert wurde
+uint8_t send_brightness_can(const uint8_t brightness) {
+  can_t msg = {
+      .id = 0x400,
+      .flags.rtr = 0,
+      .length = 1,
+      .data = {brightness},
+  };
+
+  return can_send_message(&msg);
 }
 
 int main(void) {
   uart0_init(BAUD_CALC(9600UL));
-  lcd_init(LCD_DISP_ON);
-  adc_init(ADC0D);
-  pwm_init();
-
-  DDRD &= ~(1 << ADC0D);
-  DDRD |= 1 << PD6;
-
   uart0_puts("TI_86_OLED_Statusanzeige\r\n");
 
-  while (1) {
-    const uint8_t brightness = adc_read_sync() >> 2;
+  adc_init(ADC0D);
+  pwm_init();
+  lcd_init(LCD_DISP_ON);
 
-    uart0_puts("Brightness: ");
-    uart0_putuint(brightness);
-    uart0_puts("\r\n");
+  // Initialize MCP2515 with 250 kB/s because of 8 MHz crystal
+  // actual bus speed is 125 kB/s
+  // CS pin is configured in lib/can/include/config.h
+  if (!can_init(BITRATE_250_KBPS)) {
+    uart0_puts("error: can_init\r\n");
 
-    pwm_set(brightness);
+    while (1) {
+    }
   }
-
-  // Initialize MCP2515
-  can_init(BITRATE_250_KBPS);
 
   // Load filters and masks
   can_static_filter(can_filter);
 
-  // Create a test messsage
-  can_t msg;
-
-  msg.id = 0x400;
-  msg.flags.rtr = 0;
-  // msg.flags.extended = 1;
-
-  msg.length = 4;
-  msg.data[0] = 0xde;
-  msg.data[1] = 0xad;
-  msg.data[2] = 0xbe;
-  msg.data[3] = 0xef;
-
-  // Send the message
-  can_send_message(&msg);
+  DDRD &= ~(1 << ADC0D);
+  DDRD |= 1 << PD6;
 
   while (1) {
-    // Check if a new messag was received
+    const uint8_t brightness = adc_read_sync() >> 2;
+
+    lcd_puts("Helligkeit: ");
+    uart0_puts("Helligkeit: ");
+    uart0_putuint(brightness);
+    uart0_puts("\r\n");
+
+    pwm_set(brightness);
+    show_brightness_lcd(brightness);
+
+    uart0_puts("Send brightness over can\r\n");
+    continue;
+
+    // Nachricht erhalten?
     if (can_check_message()) {
-      can_t msg;
+      can_t received_msg;
 
-      // Try to read the message
-      if (can_get_message(&msg)) {
-        uart0_puts("received something\r\n");
+      if (!can_get_message(&received_msg)) {
+        uart0_puts("error: could not read message\r\n");
       }
-    }
-  }
 
-  return 0;
+      uart0_puts("received something\r\n");
+    }
+
+    _delay_ms(500);
+  }
 }
