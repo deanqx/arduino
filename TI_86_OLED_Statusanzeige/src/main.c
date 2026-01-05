@@ -111,13 +111,16 @@ void pwm_init(void) {
 
 void pwm_set(uint8_t numerator) { OCR0A = numerator; }
 
-void show_brightness_lcd(const uint8_t brightness) {
-  char brightness_str[4]; // 3 digits + \0
+void update_brightness_lcd(const uint8_t brightness) {
+  char brightness_value_str[4]; // 3 digits + \0
 
-  utoa(brightness, brightness_str, 10);
+  utoa(brightness, brightness_value_str, 10);
 
   lcd_gotoxy(13, 0); // x offset of "Helligkeit: "
-  lcd_puts(brightness_str);
+  lcd_puts("   ");   // clear value
+
+  lcd_gotoxy(13, 0); // x offset of "Helligkeit: "
+  lcd_puts(brightness_value_str);
 }
 
 /// return FALSE falls die Nachricht nicht verschickt werden konnte,
@@ -157,18 +160,23 @@ int main(void) {
   DDRD &= ~(1 << ADC0D);
   DDRD |= 1 << PD6;
 
+  lcd_puts_p(PSTR("Helligkeit: "));
+
+  lcd_gotoxy(16, 0); // "Helligkeit: xxx/255"
+  lcd_puts_p(PSTR("/255"));
+
   while (1) {
     const uint8_t brightness = adc_read_sync() >> 2;
 
-    lcd_puts("Helligkeit: ");
     uart0_puts("Helligkeit: ");
     uart0_putuint(brightness);
     uart0_puts("\r\n");
 
     pwm_set(brightness);
-    show_brightness_lcd(brightness);
+    update_brightness_lcd(brightness);
 
     uart0_puts("Send brightness over can\r\n");
+    // TODO
     continue;
 
     // Nachricht erhalten?
