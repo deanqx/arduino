@@ -24,7 +24,7 @@ add_executable(${PROJECT_NAME}.elf
     src/main.c
 )
 
-add_subdirectory(libs)
+add_subdirectory(lib)
 target_link_libraries(${PROJECT_NAME}.elf PRIVATE usart can oled-display)
 
 # convert ELF to IHEX
