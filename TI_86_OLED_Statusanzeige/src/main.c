@@ -3,80 +3,15 @@
 #include "usart.h"
 #include <avr/io.h>
 #include <avr/pgmspace.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <util/delay.h>
 
-// -----------------------------------------------------------------------------
-/** Set filters and masks.
- *
- * The filters are divided in two groups:
- *
- * Group 0: Filter 0 and 1 with corresponding mask 0.
- * Group 1: Filter 2, 3, 4 and 5 with corresponding mask 1.
- *
- * If a group mask is set to 0, the group will receive all messages.
- *
- * If you want to receive ONLY 11 bit identifiers, set your filters
- * and masks as follows:
- *
- *	uint8_t can_filter[] PROGMEM = {
- *		// Group 0
- *		MCP2515_FILTER(0),				// Filter 0
- *		MCP2515_FILTER(0),				// Filter 1
- *
- *		// Group 1
- *		MCP2515_FILTER(0),				// Filter 2
- *		MCP2515_FILTER(0),				// Filter 3
- *		MCP2515_FILTER(0),				// Filter 4
- *		MCP2515_FILTER(0),				// Filter 5
- *
- *		MCP2515_FILTER(0),				// Mask 0 (for
- *group 0) MCP2515_FILTER(0),				// Mask 1 (for group 1)
- *	};
- *
- *
- * If you want to receive ONLY 29 bit identifiers, set your filters
- * and masks as follows:
- *
- * \code
- *	uint8_t can_filter[] PROGMEM = {
- *		// Group 0
- *		MCP2515_FILTER_EXTENDED(0),		// Filter 0
- *		MCP2515_FILTER_EXTENDED(0),		// Filter 1
- *
- *		// Group 1
- *		MCP2515_FILTER_EXTENDED(0),		// Filter 2
- *		MCP2515_FILTER_EXTENDED(0),		// Filter 3
- *		MCP2515_FILTER_EXTENDED(0),		// Filter 4
- *		MCP2515_FILTER_EXTENDED(0),		// Filter 5
- *
- *		MCP2515_FILTER_EXTENDED(0),		// Mask 0 (for group 0)
- *		MCP2515_FILTER_EXTENDED(0),		// Mask 1 (for group 1)
- *	};
- * \endcode
- *
- * If you want to receive both 11 and 29 bit identifiers, set your filters
- * and masks as follows:
- */
-const uint8_t can_filter[] PROGMEM = {
-    // Group 0
-    MCP2515_FILTER(0), // Filter 0
-    MCP2515_FILTER(0), // Filter 1
+#define LED_MASTER false
 
-    // Group 1
-    MCP2515_FILTER(0), // Filter 2
-    MCP2515_FILTER(0), // Filter 3
-    MCP2515_FILTER(0), // Filter 4
-    MCP2515_FILTER(0), // Filter 5
-
-    MCP2515_FILTER(0), // Mask 0 (for group 0)
-    MCP2515_FILTER(0), // Mask 1 (for group 1)
-};
-// You can receive 11 bit identifiers with either group 0 or 1.
-
-// -----------------------------------------------------------------------------
-// Main loop for receiving and sending messages.
+static const uint16_t ID_DEAN = 0x200;
+static const uint16_t ID_HENRY = 0x400;
 
 // analog to digital converter init
 void adc_init(const uint8_t adc_pin) {
@@ -125,9 +60,10 @@ void update_brightness_lcd(const uint8_t brightness) {
 
 /// return FALSE falls die Nachricht nicht verschickt werden konnte,
 /// ansonsten der Code des Puffes in den die Nachricht gespeichert wurde
-uint8_t send_brightness_can(const uint8_t brightness) {
+uint8_t send_brightness_can(const uint8_t brightness,
+                            const uint16_t target_id) {
   can_t msg = {
-      .id = 0x400,
+      .id = target_id,
       .flags.rtr = 0,
       .length = 1,
       .data = {brightness},
@@ -136,7 +72,7 @@ uint8_t send_brightness_can(const uint8_t brightness) {
   return can_send_message(&msg);
 }
 
-int main(void) {
+void init(void) {
   uart0_init(BAUD_CALC(9600UL));
   uart0_puts("TI_86_OLED_Statusanzeige\r\n");
 
@@ -154,9 +90,6 @@ int main(void) {
     }
   }
 
-  // Load filters and masks
-  can_static_filter(can_filter);
-
   DDRD &= ~(1 << ADC0D);
   DDRD |= 1 << PD6;
 
@@ -165,8 +98,46 @@ int main(void) {
   lcd_gotoxy(16, 0); // "Helligkeit: xxx/255"
   lcd_puts_p(PSTR("/255"));
 
+  lcd_gotoxy(0, 2);
+#if LED_MASTER
+  lcd_puts_p(PSTR("CAN Ausgang:"));
+#else
+  lcd_puts_p(PSTR("CAN Eingang:"));
+#endif
+}
+
+int main(void) {
+  init();
+
   while (1) {
+#if LED_MASTER
     const uint8_t brightness = adc_read_sync() >> 2;
+#else
+    uart0_puts("wait for CAN message...\r\n");
+
+    can_t received_msg;
+
+    while (!can_get_message(&received_msg))
+      ;
+
+    uart0_puts("received message from 0x");
+    uart0_puthex(received_msg.id >> 8);
+    uart0_puthex(received_msg.id);
+    uart0_puts("\r\n");
+
+    // TODO print on display
+
+    if (received_msg.id != ID_DEAN) {
+      continue;
+    }
+
+    if (received_msg.length != 1) {
+      uart0_puts("error: received CAN message is larger than 1\r\n");
+      continue;
+    }
+
+    const uint8_t brightness = received_msg.data[0];
+#endif
 
     uart0_puts("Helligkeit: ");
     uart0_putuint(brightness);
@@ -175,21 +146,11 @@ int main(void) {
     pwm_set(brightness);
     update_brightness_lcd(brightness);
 
+#if LED_MASTER
     uart0_puts("Send brightness over can\r\n");
-    // TODO
-    continue;
+    send_brightness_can(brightness, ID_HENRY);
 
-    // Nachricht erhalten?
-    if (can_check_message()) {
-      can_t received_msg;
-
-      if (!can_get_message(&received_msg)) {
-        uart0_puts("error: could not read message\r\n");
-      }
-
-      uart0_puts("received something\r\n");
-    }
-
-    _delay_ms(500);
+    _delay_ms(500); // optional: reduce message rate
+#endif
   }
 }
