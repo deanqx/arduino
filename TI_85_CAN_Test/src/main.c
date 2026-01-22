@@ -1,3 +1,14 @@
+/*
+ * Zuweisungsliste (ZWL)
+ * Arduino  MCU  Beschreibung
+ * D0       PD0  RX (UART)
+ * D1       PD1  TX (UART)
+ * D10      PB2  Chip Select (SPI)
+ * D11      PB3  MOSI (SPI)
+ * D12      PB4  MISO (SPI)
+ * D13      PB5  SCK (SPI)
+ */
+
 #include "can.h"
 #include "hal.h"
 #include "usart.h"
